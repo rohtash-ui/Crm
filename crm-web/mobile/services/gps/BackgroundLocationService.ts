@@ -1,5 +1,5 @@
-import { GpsTrackingConfig, GpsCoordinate } from './types';
-import { FOREGROUND_NOTIFICATION } from '../../config/gpsDefaults';
+import { GpsTrackingConfig, GpsCoordinate } from '../../../shared/gps/types';
+import { FOREGROUND_NOTIFICATION } from '../../../shared/gps/config';
 
 /**
  * Platform-specific background location service.

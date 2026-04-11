@@ -1,5 +1,5 @@
-import { LocationUpdate } from './types';
-import { LOCAL_BUFFER_TABLE } from '../../config/gpsDefaults';
+import { LocationUpdate, LocationBuffer } from '../../../shared/gps/types';
+import { MOBILE_SQLITE_TABLE as LOCAL_BUFFER_TABLE } from '../../../shared/gps/config';
 
 /**
  * Offline-resilient buffer for location updates.

@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import { GpsTrackingService } from '../services/gps/GpsTrackingService';
 import { LocationBufferService } from '../services/gps/LocationBufferService';
-import { LocationUploadService } from '../services/gps/LocationUploadService';
+import { LocationUploadService } from '../../shared/gps/LocationUploadService';
 import { BackgroundLocationService } from '../services/gps/BackgroundLocationService';
-import { GpsServiceState, GpsTrackingConfig } from '../services/gps/types';
+import { GpsServiceState, GpsTrackingConfig } from '../../shared/gps/types';
 
 interface UseGpsTrackingOptions {
   tenantId: string;
