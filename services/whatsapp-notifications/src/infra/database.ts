@@ -57,7 +57,7 @@ export class NotificationDatabase {
       [tenantId],
     );
 
-    return result.rows.map(this.mapAgent);
+    return result.rows.map((row) => this.mapAgent(row));
   }
 
   async updateAgentNotificationPreferences(
@@ -99,8 +99,8 @@ export class NotificationDatabase {
         message.id, message.tenantId, message.agentId, message.agentWhatsappNumber,
         message.leadId, message.eventType, message.templateName,
         JSON.stringify(message.templateParams), message.messageBody,
-        message.whatsappMessageId, message.status, message.errorMessage,
-        message.retryCount, message.maxRetries, message.createdAt, message.sentAt,
+        message.whatsappMessageId ?? null, message.status, message.errorMessage ?? null,
+        message.retryCount, message.maxRetries, message.createdAt, message.sentAt ?? null,
       ],
     );
   }
@@ -116,7 +116,7 @@ export class NotificationDatabase {
 
     for (const [key, value] of Object.entries(updates)) {
       if (value !== undefined) {
-        const columnName = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+        const columnName = key.replace(/([A-Z])/g, '_$1').toLowerCase().replace(/^_/, '');
         setClauses.push(`${columnName} = $${paramIndex}`);
         values.push(value);
         paramIndex++;
@@ -138,7 +138,7 @@ export class NotificationDatabase {
       [tenantId, leadId, limit],
     );
 
-    return result.rows.map(this.mapMessage);
+    return result.rows.map((row) => this.mapMessage(row));
   }
 
   async getMessagesByAgent(tenantId: string, agentId: string, limit = 50): Promise<WhatsAppMessage[]> {
@@ -150,7 +150,7 @@ export class NotificationDatabase {
       [tenantId, agentId, limit],
     );
 
-    return result.rows.map(this.mapMessage);
+    return result.rows.map((row) => this.mapMessage(row));
   }
 
   async getPendingRetryMessages(): Promise<WhatsAppMessage[]> {
@@ -161,7 +161,7 @@ export class NotificationDatabase {
        LIMIT 100`,
     );
 
-    return result.rows.map(this.mapMessage);
+    return result.rows.map((row) => this.mapMessage(row));
   }
 
   // ─── Notification Log Queries ───────────────────────────────────────
@@ -175,7 +175,7 @@ export class NotificationDatabase {
       [
         log.id, log.tenantId, log.agentId, log.leadId, log.eventType,
         log.eventId, log.messageId, log.status, log.attemptNumber,
-        log.responsePayload, log.createdAt,
+        log.responsePayload ?? null, log.createdAt,
       ],
     );
   }
@@ -218,7 +218,7 @@ export class NotificationDatabase {
     ]);
 
     return {
-      logs: dataResult.rows.map(this.mapNotificationLog),
+      logs: dataResult.rows.map((row) => this.mapNotificationLog(row)),
       total: parseInt(countResult.rows[0].total),
     };
   }
@@ -233,7 +233,7 @@ export class NotificationDatabase {
       [tenantId],
     );
 
-    return result.rows.map(this.mapTemplate);
+    return result.rows.map((row) => this.mapTemplate(row));
   }
 
   // ─── WhatsApp Config ───────────────────────────────────────────────

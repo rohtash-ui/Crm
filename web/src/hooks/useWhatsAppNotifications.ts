@@ -125,12 +125,17 @@ export function useNotificationHistory(filters: {
   const [error, setError] = useState<string | null>(null);
   const pageSize = 20;
 
+  // Stabilize filter values to avoid stale closures
+  const { agentId, leadId, eventType } = filters;
+
   const fetchPage = useCallback(async (pageNum: number) => {
     setLoading(true);
     setError(null);
     try {
       const result = await api.getNotificationHistory({
-        ...filters,
+        agentId,
+        leadId,
+        eventType,
         limit: pageSize,
         offset: pageNum * pageSize,
       });
@@ -142,7 +147,7 @@ export function useNotificationHistory(filters: {
     } finally {
       setLoading(false);
     }
-  }, [filters.agentId, filters.leadId, filters.eventType]);
+  }, [agentId, leadId, eventType, pageSize]);
 
   useEffect(() => {
     fetchPage(0);
@@ -170,7 +175,7 @@ export function useAgentList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchAgents = useCallback(() => {
     setLoading(true);
     api.getAgents()
       .then((data) => setAgents(data.agents))
@@ -178,11 +183,9 @@ export function useAgentList() {
       .finally(() => setLoading(false));
   }, []);
 
-  return { agents, loading, error, refresh: () => {
-    setLoading(true);
-    api.getAgents()
-      .then((data) => setAgents(data.agents))
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }};
+  useEffect(() => {
+    fetchAgents();
+  }, [fetchAgents]);
+
+  return { agents, loading, error, refresh: fetchAgents };
 }

@@ -74,8 +74,15 @@ async function main(): Promise<void> {
     logger.info({ port: config.port }, 'WhatsApp Notification Service started');
   });
 
-  await consumer.start();
-  logger.info('Kafka consumer connected and listening for lead events');
+  try {
+    await consumer.start();
+    logger.info('Kafka consumer connected and listening for lead events');
+  } catch (error) {
+    logger.fatal({ error }, 'Failed to start Kafka consumer — shutting down');
+    server.close();
+    await db.close();
+    process.exit(1);
+  }
 
   // ─── Graceful Shutdown ──────────────────────────────────────────────
   const shutdown = async (signal: string) => {

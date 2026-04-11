@@ -168,8 +168,9 @@ export class LeadEventConsumer {
     message: EachMessagePayload['message'],
     error: unknown,
   ): Promise<void> {
+    let producer;
     try {
-      const producer = this.kafka.producer({ idempotent: true });
+      producer = this.kafka.producer({ idempotent: true });
       await producer.connect();
 
       await producer.send({
@@ -186,10 +187,15 @@ export class LeadEventConsumer {
         }],
       });
 
-      await producer.disconnect();
       logger.info({ originalTopic }, 'Message sent to dead letter queue');
     } catch (dlqError) {
       logger.error({ originalTopic, error: dlqError }, 'Failed to send to DLQ');
+    } finally {
+      if (producer) {
+        await producer.disconnect().catch((err: unknown) => {
+          logger.error({ error: err }, 'Failed to disconnect DLQ producer');
+        });
+      }
     }
   }
 

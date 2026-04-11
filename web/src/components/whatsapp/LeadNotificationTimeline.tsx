@@ -53,7 +53,6 @@ export const LeadNotificationTimeline: React.FC<Props> = ({ leadId }) => {
           <TimelineItem
             key={message.id}
             message={message}
-            isFirst={index === 0}
             isLast={index === messages.length - 1}
           />
         ))}
@@ -64,7 +63,6 @@ export const LeadNotificationTimeline: React.FC<Props> = ({ leadId }) => {
 
 interface TimelineItemProps {
   message: NotificationMessage;
-  isFirst: boolean;
   isLast: boolean;
 }
 

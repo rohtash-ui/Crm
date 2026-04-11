@@ -29,6 +29,15 @@ const whatsappConfigSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
+function requireTenantId(req: Request, res: Response): string | null {
+  const tenantId = req.headers['x-tenant-id'] as string;
+  if (!tenantId) {
+    res.status(400).json({ error: 'X-Tenant-ID header is required' });
+    return null;
+  }
+  return tenantId;
+}
+
 export function createRoutes(db: NotificationDatabase, whatsappClient: WhatsAppClient): Router {
   const router = Router();
 
@@ -46,15 +55,16 @@ export function createRoutes(db: NotificationDatabase, whatsappClient: WhatsAppC
    */
   router.get('/api/v1/agents/:agentId/whatsapp-preferences', async (req: Request, res: Response) => {
     try {
-      const tenantId = req.headers['x-tenant-id'] as string;
+      const tenantId = requireTenantId(req, res);
+      if (!tenantId) return;
       const { agentId } = req.params;
 
       const agent = await db.getAgentById(tenantId, agentId);
       if (!agent) {
-        return res.status(404).json({ error: 'Agent not found' });
+        return void res.status(404).json({ error: 'Agent not found' });
       }
 
-      res.json({
+      return void res.json({
         agentId: agent.id,
         whatsappNumber: agent.whatsappNumber,
         preferences: agent.notificationPreferences,
@@ -71,12 +81,13 @@ export function createRoutes(db: NotificationDatabase, whatsappClient: WhatsAppC
    */
   router.put('/api/v1/agents/:agentId/whatsapp-preferences', async (req: Request, res: Response) => {
     try {
-      const tenantId = req.headers['x-tenant-id'] as string;
+      const tenantId = requireTenantId(req, res);
+      if (!tenantId) return;
       const { agentId } = req.params;
 
       const parsed = updatePreferencesSchema.safeParse(req.body);
       if (!parsed.success) {
-        return res.status(400).json({ error: 'Invalid preferences', details: parsed.error.issues });
+        return void res.status(400).json({ error: 'Invalid preferences', details: parsed.error.issues });
       }
 
       await db.updateAgentNotificationPreferences(
@@ -105,12 +116,13 @@ export function createRoutes(db: NotificationDatabase, whatsappClient: WhatsAppC
    */
   router.put('/api/v1/agents/:agentId/whatsapp-number', async (req: Request, res: Response) => {
     try {
-      const tenantId = req.headers['x-tenant-id'] as string;
+      const tenantId = requireTenantId(req, res);
+      if (!tenantId) return;
       const { agentId } = req.params;
       const { whatsappNumber } = req.body;
 
       if (!whatsappNumber || !/^\+\d{10,15}$/.test(whatsappNumber)) {
-        return res.status(400).json({ error: 'Invalid WhatsApp number. Use E.164 format: +1234567890' });
+        return void res.status(400).json({ error: 'Invalid WhatsApp number. Use E.164 format: +1234567890' });
       }
 
       await db.updateAgentWhatsappNumber(tenantId, agentId, whatsappNumber);
@@ -129,8 +141,11 @@ export function createRoutes(db: NotificationDatabase, whatsappClient: WhatsAppC
    */
   router.get('/api/v1/notifications/history', async (req: Request, res: Response) => {
     try {
-      const tenantId = req.headers['x-tenant-id'] as string;
-      const { agentId, leadId, eventType, limit, offset } = req.query;
+      const tenantId = requireTenantId(req, res);
+      if (!tenantId) return;
+      const { agentId, leadId, eventType } = req.query;
+      const limitParam = req.query.limit ? Math.max(1, Math.min(1000, parseInt(req.query.limit as string) || 100)) : 100;
+      const offsetParam = req.query.offset ? Math.max(0, parseInt(req.query.offset as string) || 0) : 0;
 
       const result = await db.getNotificationHistory(
         tenantId,
@@ -139,8 +154,8 @@ export function createRoutes(db: NotificationDatabase, whatsappClient: WhatsAppC
           leadId: leadId as string,
           eventType: eventType as string,
         },
-        limit ? parseInt(limit as string) : 100,
-        offset ? parseInt(offset as string) : 0,
+        limitParam,
+        offsetParam,
       );
 
       res.json(result);
@@ -156,7 +171,8 @@ export function createRoutes(db: NotificationDatabase, whatsappClient: WhatsAppC
    */
   router.get('/api/v1/notifications/lead/:leadId', async (req: Request, res: Response) => {
     try {
-      const tenantId = req.headers['x-tenant-id'] as string;
+      const tenantId = requireTenantId(req, res);
+      if (!tenantId) return;
       const { leadId } = req.params;
 
       const messages = await db.getMessagesByLead(tenantId, leadId);
@@ -188,7 +204,8 @@ export function createRoutes(db: NotificationDatabase, whatsappClient: WhatsAppC
    */
   router.get('/api/v1/notifications/agent/:agentId', async (req: Request, res: Response) => {
     try {
-      const tenantId = req.headers['x-tenant-id'] as string;
+      const tenantId = requireTenantId(req, res);
+      if (!tenantId) return;
       const { agentId } = req.params;
 
       const messages = await db.getMessagesByAgent(tenantId, agentId);
@@ -212,7 +229,8 @@ export function createRoutes(db: NotificationDatabase, whatsappClient: WhatsAppC
    */
   router.get('/api/v1/notifications/stats', async (req: Request, res: Response) => {
     try {
-      const tenantId = req.headers['x-tenant-id'] as string;
+      const tenantId = requireTenantId(req, res);
+      if (!tenantId) return;
       const days = req.query.days ? parseInt(req.query.days as string) : 30;
 
       const stats = await db.getNotificationStats(tenantId, days);
@@ -231,11 +249,12 @@ export function createRoutes(db: NotificationDatabase, whatsappClient: WhatsAppC
    */
   router.get('/api/v1/whatsapp/config', async (req: Request, res: Response) => {
     try {
-      const tenantId = req.headers['x-tenant-id'] as string;
+      const tenantId = requireTenantId(req, res);
+      if (!tenantId) return;
       const config = await db.getWhatsAppConfig(tenantId);
 
       if (!config) {
-        return res.status(404).json({ error: 'WhatsApp not configured for this tenant' });
+        return void res.status(404).json({ error: 'WhatsApp not configured for this tenant' });
       }
 
       // Redact sensitive fields
@@ -255,11 +274,12 @@ export function createRoutes(db: NotificationDatabase, whatsappClient: WhatsAppC
    */
   router.put('/api/v1/whatsapp/config', async (req: Request, res: Response) => {
     try {
-      const tenantId = req.headers['x-tenant-id'] as string;
+      const tenantId = requireTenantId(req, res);
+      if (!tenantId) return;
       const parsed = whatsappConfigSchema.safeParse(req.body);
 
       if (!parsed.success) {
-        return res.status(400).json({ error: 'Invalid config', details: parsed.error.issues });
+        return void res.status(400).json({ error: 'Invalid config', details: parsed.error.issues });
       }
 
       await db.upsertWhatsAppConfig({ tenantId, ...parsed.data });
@@ -278,7 +298,8 @@ export function createRoutes(db: NotificationDatabase, whatsappClient: WhatsAppC
    */
   router.get('/api/v1/whatsapp/templates', async (req: Request, res: Response) => {
     try {
-      const tenantId = req.headers['x-tenant-id'] as string;
+      const tenantId = requireTenantId(req, res);
+      if (!tenantId) return;
       const templates = await db.getTemplates(tenantId);
       res.json({ templates });
     } catch (error) {
@@ -302,9 +323,9 @@ export function createRoutes(db: NotificationDatabase, whatsappClient: WhatsAppC
     const result = whatsappClient.verifyWebhook(mode, token, challenge, verifyToken);
 
     if (result) {
-      res.status(200).send(result);
+      return void res.status(200).send(result);
     } else {
-      res.status(403).json({ error: 'Verification failed' });
+      return void res.status(403).json({ error: 'Verification failed' });
     }
   });
 
@@ -338,7 +359,8 @@ export function createRoutes(db: NotificationDatabase, whatsappClient: WhatsAppC
    */
   router.get('/api/v1/agents', async (req: Request, res: Response) => {
     try {
-      const tenantId = req.headers['x-tenant-id'] as string;
+      const tenantId = requireTenantId(req, res);
+      if (!tenantId) return;
       const agents = await db.getAgentsByTenant(tenantId);
 
       res.json({

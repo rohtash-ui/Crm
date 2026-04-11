@@ -138,6 +138,7 @@ export const WhatsAppNotificationSettings: React.FC<Props> = ({ agentId, onSaved
             onClick={() => setForm((prev) => ({ ...prev, whatsappEnabled: !prev.whatsappEnabled }))}
             role="switch"
             aria-checked={form.whatsappEnabled}
+            aria-label="Enable WhatsApp Notifications"
           >
             <span className="wa-toggle-thumb" />
           </button>

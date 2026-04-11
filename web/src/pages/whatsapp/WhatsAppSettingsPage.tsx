@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { WhatsAppNotificationSettings } from '../../components/whatsapp/WhatsAppNotificationSettings';
 import { NotificationDashboard } from '../../components/whatsapp/NotificationDashboard';
+import { getWhatsAppConfig } from '../../services/whatsapp-api';
 
 /**
  * Main WhatsApp settings page — tabs between dashboard and settings.
@@ -71,8 +72,28 @@ const WhatsAppAdminConfig: React.FC = () => {
     webhookVerifyToken: '',
     isActive: true,
   });
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Load existing config on mount
+  useEffect(() => {
+    setLoading(true);
+    getWhatsAppConfig()
+      .then((data) => {
+        setConfig({
+          businessAccountId: data.businessAccountId,
+          phoneNumberId: data.phoneNumberId,
+          apiVersion: data.apiVersion,
+          webhookVerifyToken: '', // Never pre-fill secrets
+          isActive: data.isActive,
+        });
+      })
+      .catch(() => {
+        // Config may not exist yet — that's ok, show empty form
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);
@@ -96,6 +117,10 @@ const WhatsAppAdminConfig: React.FC = () => {
       setSaving(false);
     }
   };
+
+  if (loading) {
+    return <div className="wa-config-loading">Loading configuration...</div>;
+  }
 
   return (
     <div className="wa-admin-config">
@@ -164,6 +189,7 @@ const WhatsAppAdminConfig: React.FC = () => {
             onClick={() => setConfig((prev) => ({ ...prev, isActive: !prev.isActive }))}
             role="switch"
             aria-checked={config.isActive}
+            aria-label="WhatsApp notifications active"
           >
             <span className="wa-toggle-thumb" />
           </button>
