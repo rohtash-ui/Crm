@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "CRM Backup Manager",
+  "version": "1.0.0",
+  "description": "Monitor, trigger, and manage CRM data backups. Sync to Google Drive, S3, or personal drive with one click.",
+  "permissions": [
+    "storage",
+    "alarms",
+    "notifications"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "options_page": "pages/options.html",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
+}

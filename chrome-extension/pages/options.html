@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRM Backup Manager — Settings</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f8f9fb;
+      color: #1a1a2e;
+      padding: 40px;
+    }
+
+    .container {
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      color: #78909c;
+      font-size: 14px;
+      margin-bottom: 32px;
+    }
+
+    .section {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #37474f;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #eceff1;
+    }
+
+    .field {
+      margin-bottom: 16px;
+    }
+
+    .field:last-child {
+      margin-bottom: 0;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #37474f;
+      margin-bottom: 6px;
+    }
+
+    .help {
+      font-size: 11px;
+      color: #90a4ae;
+      margin-top: 4px;
+    }
+
+    input[type="text"],
+    input[type="url"],
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #cfd8dc;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: inherit;
+      color: #37474f;
+      background: #fafafa;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: #1565c0;
+      background: #fff;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+    }
+
+    .toggle-label {
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .toggle {
+      position: relative;
+      width: 40px;
+      height: 22px;
+    }
+
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #cfd8dc;
+      border-radius: 22px;
+      transition: 0.3s;
+    }
+
+    .toggle-slider::before {
+      content: "";
+      position: absolute;
+      height: 16px;
+      width: 16px;
+      left: 3px;
+      bottom: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: 0.3s;
+    }
+
+    .toggle input:checked + .toggle-slider {
+      background: #1565c0;
+    }
+
+    .toggle input:checked + .toggle-slider::before {
+      transform: translateX(18px);
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .btn {
+      padding: 10px 24px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-primary {
+      background: #1565c0;
+      color: #fff;
+    }
+
+    .btn-primary:hover { background: #0d47a1; }
+
+    .btn-secondary {
+      background: #eceff1;
+      color: #37474f;
+    }
+
+    .btn-secondary:hover { background: #cfd8dc; }
+
+    .btn-danger {
+      background: #ffebee;
+      color: #c62828;
+    }
+
+    .btn-danger:hover { background: #ffcdd2; }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #fff;
+      background: #2e7d32;
+      animation: slideUp 0.3s ease;
+      z-index: 1000;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to   { transform: translateY(0); opacity: 1; }
+    }
+
+    .connection-test {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      font-size: 12px;
+    }
+
+    .test-result {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .test-result.success { background: #e8f5e9; color: #2e7d32; }
+    .test-result.fail    { background: #ffebee; color: #c62828; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>CRM Backup Manager Settings</h1>
+    <p class="subtitle">Configure backup server connection, notifications, and monitoring.</p>
+
+    <!-- Server Connection -->
+    <div class="section">
+      <h2 class="section-title">Server Connection</h2>
+      <div class="field">
+        <label for="api-endpoint">Backup API Endpoint</label>
+        <input type="url" id="api-endpoint" placeholder="http://localhost:7500">
+        <p class="help">URL of the backup API server. Start the server with: <code>node backup-api-server.js</code></p>
+      </div>
+      <div class="connection-test">
+        <button class="btn btn-secondary" id="btn-test">Test Connection</button>
+        <span id="test-result"></span>
+      </div>
+    </div>
+
+    <!-- Monitoring -->
+    <div class="section">
+      <h2 class="section-title">Monitoring</h2>
+      <div class="field">
+        <label for="check-interval">Health Check Interval (minutes)</label>
+        <input type="number" id="check-interval" min="5" max="1440" value="15">
+        <p class="help">How often the extension checks backup health in the background. Default: 15 minutes.</p>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-label">Desktop Notifications</span>
+        <label class="toggle">
+          <input type="checkbox" id="notifications-enabled" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <p class="help">Get notified when backups fail or become stale.</p>
+    </div>
+
+    <!-- Freshness Thresholds -->
+    <div class="section">
+      <h2 class="section-title">Freshness Alerts</h2>
+      <p class="help" style="margin-bottom: 12px;">Alert when a backup type exceeds this age (hours).</p>
+      <div class="field">
+        <label for="threshold-db-full">Database Full Backup</label>
+        <input type="number" id="threshold-db-full" min="1" max="168" value="26">
+      </div>
+      <div class="field">
+        <label for="threshold-db-logical">Database Logical Backup</label>
+        <input type="number" id="threshold-db-logical" min="1" max="48" value="8">
+      </div>
+      <div class="field">
+        <label for="threshold-files">File Uploads</label>
+        <input type="number" id="threshold-files" min="1" max="48" value="2">
+      </div>
+      <div class="field">
+        <label for="threshold-config">Config Backup</label>
+        <input type="number" id="threshold-config" min="1" max="168" value="48">
+      </div>
+    </div>
+
+    <!-- Data Management -->
+    <div class="section">
+      <h2 class="section-title">Data</h2>
+      <div class="field">
+        <button class="btn btn-danger" id="btn-clear-data">Clear All Extension Data</button>
+        <p class="help">Resets activity log, cached status, and settings to defaults.</p>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button class="btn btn-primary" id="btn-save">Save Settings</button>
+      <button class="btn btn-secondary" id="btn-reset">Reset to Defaults</button>
+    </div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

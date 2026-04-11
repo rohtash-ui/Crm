@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRM Backup Manager</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <svg class="logo" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+          <path d="M2 17l10 5 10-5"/>
+          <path d="M2 12l10 5 10-5"/>
+        </svg>
+        <h1>CRM Backup</h1>
+      </div>
+      <div class="header-right">
+        <span id="overall-status" class="status-badge status-unknown">--</span>
+      </div>
+    </header>
+
+    <!-- Connection status -->
+    <div id="connection-bar" class="connection-bar disconnected">
+      <span id="connection-text">Connecting...</span>
+      <button id="btn-reconnect" class="btn-link" style="display:none;">Reconnect</button>
+    </div>
+
+    <!-- Last check time -->
+    <div class="last-check">
+      Last checked: <span id="last-check-time">never</span>
+      <button id="btn-refresh" class="btn-icon" title="Refresh now">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/>
+          <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Backup Status Cards -->
+    <section class="section">
+      <h2 class="section-title">Backup Status</h2>
+      <div class="card-grid">
+        <div class="card" id="card-db-full">
+          <div class="card-header">
+            <span class="card-icon">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+                <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+              </svg>
+            </span>
+            <span class="card-label">Database (Full)</span>
+            <span class="card-status" id="status-db-full">--</span>
+          </div>
+          <div class="card-detail" id="detail-db-full">Last: --</div>
+        </div>
+
+        <div class="card" id="card-db-logical">
+          <div class="card-header">
+            <span class="card-icon">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+                <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+              </svg>
+            </span>
+            <span class="card-label">Database (Logical)</span>
+            <span class="card-status" id="status-db-logical">--</span>
+          </div>
+          <div class="card-detail" id="detail-db-logical">Last: --</div>
+        </div>
+
+        <div class="card" id="card-files">
+          <div class="card-header">
+            <span class="card-icon">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"/><path d="M13 2v7h7"/>
+              </svg>
+            </span>
+            <span class="card-label">Files & Uploads</span>
+            <span class="card-status" id="status-files">--</span>
+          </div>
+          <div class="card-detail" id="detail-files">Last: --</div>
+        </div>
+
+        <div class="card" id="card-config">
+          <div class="card-header">
+            <span class="card-icon">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+              </svg>
+            </span>
+            <span class="card-label">Config</span>
+            <span class="card-status" id="status-config">--</span>
+          </div>
+          <div class="card-detail" id="detail-config">Last: --</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cloud Sync Status -->
+    <section class="section">
+      <h2 class="section-title">Cloud Sync</h2>
+      <div class="sync-grid">
+        <div class="sync-item" id="sync-gdrive">
+          <span class="sync-icon">
+            <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M12 2L2 19.5h7.2L12 14l2.8 5.5H22z"/></svg>
+          </span>
+          <span class="sync-label">Google Drive</span>
+          <span class="sync-status" id="sync-status-gdrive">--</span>
+        </div>
+        <div class="sync-item" id="sync-s3">
+          <span class="sync-icon">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12A10 10 0 1012 2a10 10 0 0010 10z"/><path d="M2 12h20"/></svg>
+          </span>
+          <span class="sync-label">AWS S3</span>
+          <span class="sync-status" id="sync-status-s3">--</span>
+        </div>
+        <div class="sync-item" id="sync-personal">
+          <span class="sync-icon">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01"/></svg>
+          </span>
+          <span class="sync-label">Personal Drive</span>
+          <span class="sync-status" id="sync-status-personal">--</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Storage -->
+    <section class="section">
+      <h2 class="section-title">Storage</h2>
+      <div class="storage-bar-container">
+        <div class="storage-bar">
+          <div class="storage-fill" id="storage-fill" style="width: 0%"></div>
+        </div>
+        <div class="storage-labels">
+          <span id="storage-used">-- used</span>
+          <span id="storage-total">of --</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Actions -->
+    <section class="section">
+      <h2 class="section-title">Quick Actions</h2>
+      <div class="actions-grid">
+        <button class="btn btn-primary" id="btn-backup-db" title="Run database backup">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+          </svg>
+          Backup DB
+        </button>
+        <button class="btn btn-primary" id="btn-backup-files" title="Run file backup">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"/><path d="M13 2v7h7"/>
+          </svg>
+          Backup Files
+        </button>
+        <button class="btn btn-secondary" id="btn-sync-cloud" title="Sync to cloud now">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/>
+          </svg>
+          Cloud Sync
+        </button>
+        <button class="btn btn-secondary" id="btn-verify" title="Verify backup integrity">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/>
+          </svg>
+          Verify
+        </button>
+      </div>
+    </section>
+
+    <!-- Activity Log -->
+    <section class="section">
+      <h2 class="section-title">
+        Recent Activity
+        <button id="btn-clear-log" class="btn-link" title="Clear log">Clear</button>
+      </h2>
+      <div class="activity-log" id="activity-log">
+        <div class="activity-empty">No recent activity</div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <a href="#" id="btn-settings" class="btn-link">Settings</a>
+      <span class="version">v1.0.0</span>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

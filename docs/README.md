@@ -67,4 +67,5 @@ on-call responder should open to understand how the system stays up.
 2. If an alert fired but you have time to think, open [06-observability.md](06-observability.md) and [09-incident-response.md](09-incident-response.md).
 3. If you are building something new, start with [01-architecture-overview.md](01-architecture-overview.md) and [05-high-availability.md](05-high-availability.md).
 4. If you need to back up or restore data, open [11-data-backup-recovery.md](11-data-backup-recovery.md) and the `backup-scripts/` directory.
-5. If you are wondering "how does it recover itself?", read [08-self-healing-loops.md](08-self-healing-loops.md).
+5. To monitor backups from your browser, install the Chrome extension from `chrome-extension/`.
+6. If you are wondering "how does it recover itself?", read [08-self-healing-loops.md](08-self-healing-loops.md).
