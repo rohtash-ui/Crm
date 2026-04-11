@@ -11,7 +11,7 @@ import { MOBILE_SQLITE_TABLE as LOCAL_BUFFER_TABLE } from '../../../shared/gps/c
  * The buffer is a FIFO queue: updates are pushed in order and drained from
  * the oldest first when the upload service is ready.
  */
-export class LocationBufferService {
+export class LocationBufferService implements LocationBuffer {
   private db: any; // SQLite database handle
 
   constructor(db: any) {

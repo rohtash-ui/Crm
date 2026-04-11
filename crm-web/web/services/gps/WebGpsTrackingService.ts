@@ -84,7 +84,7 @@ export class WebGpsTrackingService {
       errorMessage: null,
     };
 
-    // Bind lifecycle handlers.
+    // Bind lifecycle handlers so we can add/remove the exact same function reference.
     this.handleVisibilityChange = this.onVisibilityChange.bind(this);
     this.handleBeforeUnload = this.onBeforeUnload.bind(this);
     this.handleOnline = this.onOnline.bind(this);
@@ -148,12 +148,15 @@ export class WebGpsTrackingService {
       this.start();
     }
 
-    if (this.state.isTracking && (patch.intervalMs || patch.distanceFilterMeters || patch.mode)) {
+    // Use 'in' operator so falsy-but-valid numeric values (e.g. 0) still trigger restart.
+    const watcherAffected =
+      'intervalMs' in patch || 'distanceFilterMeters' in patch || 'mode' in patch;
+    if (this.state.isTracking && watcherAffected) {
       this.stopWatching();
       this.startWatching();
     }
 
-    if (this.state.isTracking && patch.batchUploadIntervalMs) {
+    if (this.state.isTracking && 'batchUploadIntervalMs' in patch) {
       this.stopBatchUploadTimer();
       this.startBatchUploadTimer();
     }
@@ -196,7 +199,13 @@ export class WebGpsTrackingService {
     const options = this.buildWatchOptions();
 
     this.watchId = navigator.geolocation.watchPosition(
-      (position) => this.onPositionUpdate(position),
+      (position) => {
+        // watchPosition callbacks are synchronous — handle the async work and
+        // catch any errors so they don't become unhandled promise rejections.
+        this.handleGeolocationPosition(position).catch((err) => {
+          this.updateState({ errorMessage: `GPS update error: ${err.message}` });
+        });
+      },
       (error) => this.onPositionError(error),
       options,
     );
@@ -226,9 +235,8 @@ export class WebGpsTrackingService {
   // Position callbacks
   // ---------------------------------------------------------------------------
 
-  private async onPositionUpdate(position: GeolocationPosition): Promise<void> {
-    if (!this.isWithinActiveWindow()) return;
-
+  /** Convert a native GeolocationPosition to GpsCoordinate and process it. */
+  private async handleGeolocationPosition(position: GeolocationPosition): Promise<void> {
     const coordinate: GpsCoordinate = {
       latitude: position.coords.latitude,
       longitude: position.coords.longitude,
@@ -239,8 +247,18 @@ export class WebGpsTrackingService {
       speed: position.coords.speed,
       timestamp: position.timestamp,
     };
+    await this.handleCoordinate(coordinate);
+  }
 
-    // Distance filter.
+  /**
+   * Core coordinate processing: applies active-window check, distance filter,
+   * builds a LocationUpdate, stores it in the buffer, and triggers eager flush
+   * when the buffer is full.
+   */
+  async handleCoordinate(coordinate: GpsCoordinate): Promise<void> {
+    if (!this.state.isTracking || !this.isWithinActiveWindow()) return;
+
+    // Distance filter — skip if the user hasn't moved enough.
     if (this.state.lastCoordinate && !this.exceedsDistanceFilter(coordinate)) {
       return;
     }
@@ -264,7 +282,7 @@ export class WebGpsTrackingService {
       errorMessage: null,
     });
 
-    // Eagerly flush if buffer is full.
+    // Eagerly flush if the buffer is full.
     const pending = await this.buffer.count();
     if (pending >= this.config.maxBatchSize) {
       this.flushBuffer().catch(() => {});
@@ -302,19 +320,19 @@ export class WebGpsTrackingService {
    * Handle tab visibility changes.
    *
    * When the tab goes hidden (user switches tabs or minimizes):
-   *  - Flush the buffer immediately, since Chrome/Safari may throttle
-   *    timers to 1/min or suspend JS entirely for background tabs.
+   *  - Flush the buffer immediately. Chrome/Safari throttle background-tab
+   *    timers to 1/min or suspend JS entirely, so the periodic upload timer
+   *    can't be relied upon.
    *
    * When the tab becomes visible again:
+   *  - Refresh the cached auth token.
    *  - Restart the watcher if it was paused by active-hours enforcement.
-   *  - Refresh the auth token.
    */
   private onVisibilityChange(): void {
     if (document.visibilityState === 'hidden') {
       this.flushBuffer().catch(() => {});
     } else if (document.visibilityState === 'visible') {
       this.refreshAuthToken();
-      // Restart watcher if it was stopped by active-hours and we're back in window.
       if (this.watchId === null && this.state.isTracking && this.isWithinActiveWindow()) {
         this.startWatching();
       }
@@ -325,38 +343,40 @@ export class WebGpsTrackingService {
    * Handle page unload (tab close, navigation away, browser close).
    *
    * Uses navigator.sendBeacon() for a best-effort flush. sendBeacon is
-   * fire-and-forget and works even as the page is being torn down — the
-   * browser guarantees delivery attempt after the JS context is gone.
+   * fire-and-forget and survives page teardown — the browser guarantees the
+   * delivery attempt even after the JS context is destroyed. Regular fetch()
+   * calls are cancelled on unload, so this is the only reliable option.
    *
-   * This is critical because regular fetch() calls are cancelled on unload.
+   * Remaining updates in IndexedDB are safe: they persist across page reloads
+   * and will be picked up by the next session.
    */
   private onBeforeUnload(): void {
-    // Synchronously read whatever we can from the buffer.
-    // IndexedDB is async, so we can only send what we've already drained.
-    // The upload timer should have flushed recently. For any remaining
-    // updates still in IndexedDB, they'll survive the page reload (IndexedDB
-    // persists) and be picked up on the next session start.
-    if (this.lastAuthToken && this.state.lastCoordinate) {
-      // Send the last known position as a single-point beacon.
-      const lastUpdate: LocationUpdate = {
-        tenantId: this.tenantId,
-        userId: this.userId,
-        deviceId: this.deviceId,
-        coordinate: this.state.lastCoordinate,
-        batteryLevel: null,
-        networkType: getNetworkType(),
-        isMoving: false,
-        activityType: 'unknown',
-      };
+    // Snapshot class properties into locals so TypeScript can narrow them and
+    // so there's no risk of the values changing between the null check and use.
+    const token = this.lastAuthToken;
+    const lastCoordinate = this.state.lastCoordinate;
 
-      const batch: LocationBatch = {
+    if (!token || !lastCoordinate) return;
+
+    const lastUpdate: LocationUpdate = {
+      tenantId: this.tenantId,
+      userId: this.userId,
+      deviceId: this.deviceId,
+      coordinate: lastCoordinate,
+      batteryLevel: null,
+      networkType: getNetworkType(),
+      isMoving: false,
+      activityType: 'unknown',
+    };
+
+    this.uploader.sendBeacon(
+      {
         updates: [lastUpdate],
         batchId: `beacon-${Date.now()}`,
         sentAt: Date.now(),
-      };
-
-      this.uploader.sendBeacon(batch, this.lastAuthToken);
-    }
+      },
+      token,
+    );
   }
 
   /**
@@ -430,15 +450,13 @@ export class WebGpsTrackingService {
   /**
    * Ensure geolocation permission is granted.
    *
-   * Chrome: navigator.permissions.query() works, then watchPosition triggers
+   * Chrome: navigator.permissions.query() works; watchPosition triggers
    *         the prompt if state is 'prompt'.
-   * Safari: navigator.permissions is not fully supported in older versions,
-   *         so we fall back to a getCurrentPosition() call which triggers
-   *         the native permission dialog.
+   * Safari: navigator.permissions is partially supported. We fall back to
+   *         a getCurrentPosition() call which triggers the native dialog.
    */
   private async ensurePermissions(): Promise<boolean> {
     try {
-      // Try the Permissions API first (Chrome, Firefox, Edge).
       if (navigator.permissions) {
         const result = await navigator.permissions.query({ name: 'geolocation' });
         if (result.state === 'granted') return true;
@@ -524,8 +542,7 @@ function classifyActivity(speed: number | null): LocationUpdate['activityType'] 
   if (speed === null) return 'unknown';
   if (speed < 0.5) return 'stationary';
   if (speed < 2.0) return 'walking';
-  if (speed >= 2.0) return 'driving';
-  return 'unknown';
+  return 'driving';
 }
 
 async function getBatteryLevel(): Promise<number | null> {

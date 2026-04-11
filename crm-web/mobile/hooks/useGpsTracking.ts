@@ -105,11 +105,8 @@ export function useGpsTracking(options: UseGpsTrackingOptions) {
         // when the app is backgrounded.
         if (service.getState().isTracking) {
           await backgroundService.start(
-            { ...service['config'] },
-            (coord) => service['onPositionUpdate']({
-              coords: coord as any,
-              timestamp: coord.timestamp,
-            } as any),
+            service.getConfig(),
+            (coord) => service.handleCoordinate(coord).catch(() => {}),
           );
         }
       }

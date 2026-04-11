@@ -3,10 +3,10 @@ import {
   GpsServiceState,
   GpsTrackingConfig,
   LocationBatch,
+  LocationBuffer,
   LocationUpdate,
   TrackingMode,
 } from '../../../shared/gps/types';
-import { LocationBufferService } from './LocationBufferService';
 import { LocationUploadService } from '../../../shared/gps/LocationUploadService';
 import { GPS_DEFAULTS } from '../../../shared/gps/config';
 
@@ -34,7 +34,9 @@ export class GpsTrackingService {
   private uploadTimerId: ReturnType<typeof setInterval> | null = null;
   private activeHoursTimerId: ReturnType<typeof setInterval> | null = null;
 
-  private readonly buffer: LocationBufferService;
+  // Use the LocationBuffer interface so the concrete storage (SQLite, IndexedDB,
+  // in-memory) is not coupled to this service.
+  private readonly buffer: LocationBuffer;
   private readonly uploader: LocationUploadService;
   private readonly tenantId: string;
   private readonly userId: string;
@@ -44,7 +46,7 @@ export class GpsTrackingService {
     tenantId: string;
     userId: string;
     deviceId: string;
-    buffer: LocationBufferService;
+    buffer: LocationBuffer;
     uploader: LocationUploadService;
     initialConfig?: Partial<GpsTrackingConfig>;
   }) {
@@ -114,14 +116,15 @@ export class GpsTrackingService {
       this.start();
     }
 
-    // If the interval changed and we're tracking, restart the watcher.
-    if (this.state.isTracking && (patch.intervalMs || patch.distanceFilterMeters || patch.mode)) {
+    // Use 'in' operator so falsy-but-valid values (e.g. 0) still trigger a restart.
+    const watcherAffected =
+      'intervalMs' in patch || 'distanceFilterMeters' in patch || 'mode' in patch;
+    if (this.state.isTracking && watcherAffected) {
       this.stopWatching();
       this.startWatching();
     }
 
-    // If the upload interval changed, restart the timer.
-    if (this.state.isTracking && patch.batchUploadIntervalMs) {
+    if (this.state.isTracking && 'batchUploadIntervalMs' in patch) {
       this.stopBatchUploadTimer();
       this.startBatchUploadTimer();
     }
@@ -130,6 +133,11 @@ export class GpsTrackingService {
   /** Get a snapshot of the current service state. */
   getState(): Readonly<GpsServiceState> {
     return { ...this.state };
+  }
+
+  /** Get a copy of the current tracking config. Used by BackgroundLocationService. */
+  getConfig(): GpsTrackingConfig {
+    return { ...this.config };
   }
 
   /** Subscribe to state changes. Returns an unsubscribe function. */
@@ -156,6 +164,44 @@ export class GpsTrackingService {
     });
   }
 
+  /**
+   * Public entry point for background-service position updates.
+   * Called by the BackgroundLocationService callback so it doesn't need to
+   * access private members.
+   */
+  async handleCoordinate(coordinate: GpsCoordinate): Promise<void> {
+    if (!this.state.isTracking || !this.isWithinActiveWindow()) return;
+
+    // Distance filter.
+    if (this.state.lastCoordinate && !this.exceedsDistanceFilter(coordinate)) {
+      return;
+    }
+
+    const update: LocationUpdate = {
+      tenantId: this.tenantId,
+      userId: this.userId,
+      deviceId: this.deviceId,
+      coordinate,
+      batteryLevel: await getBatteryLevel(),
+      networkType: getNetworkType(),
+      isMoving: (coordinate.speed ?? 0) > 0.5,
+      activityType: classifyActivity(coordinate.speed),
+    };
+
+    await this.buffer.push(update);
+
+    this.updateState({
+      lastCoordinate: coordinate,
+      pendingUpdates: await this.buffer.count(),
+      errorMessage: null,
+    });
+
+    const pending = await this.buffer.count();
+    if (pending >= this.config.maxBatchSize) {
+      this.flushBuffer().catch(() => {});
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Native location provider
   // ---------------------------------------------------------------------------
@@ -166,7 +212,11 @@ export class GpsTrackingService {
     // Use the React Native Geolocation API (or a polyfill like
     // react-native-geolocation-service / expo-location).
     this.watchId = navigator.geolocation.watchPosition(
-      (position) => this.onPositionUpdate(position),
+      (position) => {
+        this.handleGeolocationPosition(position).catch((err) => {
+          this.updateState({ errorMessage: `GPS update error: ${err.message}` });
+        });
+      },
       (error) => this.onPositionError(error),
       options,
     );
@@ -196,9 +246,8 @@ export class GpsTrackingService {
   // Position callbacks
   // ---------------------------------------------------------------------------
 
-  private async onPositionUpdate(position: GeolocationPosition): Promise<void> {
-    if (!this.isWithinActiveWindow()) return;
-
+  /** Convert a native GeolocationPosition to GpsCoordinate and delegate. */
+  private async handleGeolocationPosition(position: GeolocationPosition): Promise<void> {
     const coordinate: GpsCoordinate = {
       latitude: position.coords.latitude,
       longitude: position.coords.longitude,
@@ -209,36 +258,7 @@ export class GpsTrackingService {
       speed: position.coords.speed,
       timestamp: position.timestamp,
     };
-
-    // Distance filter — skip if moved less than threshold.
-    if (this.state.lastCoordinate && !this.exceedsDistanceFilter(coordinate)) {
-      return;
-    }
-
-    const update: LocationUpdate = {
-      tenantId: this.tenantId,
-      userId: this.userId,
-      deviceId: this.deviceId,
-      coordinate,
-      batteryLevel: await getBatteryLevel(),
-      networkType: getNetworkType(),
-      isMoving: (coordinate.speed ?? 0) > 0.5,
-      activityType: classifyActivity(coordinate.speed),
-    };
-
-    await this.buffer.push(update);
-
-    this.updateState({
-      lastCoordinate: coordinate,
-      pendingUpdates: await this.buffer.count(),
-      errorMessage: null,
-    });
-
-    // Eagerly flush if the buffer is full.
-    const pending = await this.buffer.count();
-    if (pending >= this.config.maxBatchSize) {
-      this.flushBuffer().catch(() => {}); // fire-and-forget; retry handled by upload service
-    }
+    await this.handleCoordinate(coordinate);
   }
 
   private onPositionError(error: GeolocationPositionError): void {
@@ -381,8 +401,7 @@ function classifyActivity(speed: number | null): LocationUpdate['activityType'] 
   if (speed === null) return 'unknown';
   if (speed < 0.5) return 'stationary';
   if (speed < 2.0) return 'walking';
-  if (speed >= 2.0) return 'driving';
-  return 'unknown';
+  return 'driving';
 }
 
 async function getBatteryLevel(): Promise<number | null> {
@@ -396,9 +415,9 @@ async function getBatteryLevel(): Promise<number | null> {
 
 function getNetworkType(): LocationUpdate['networkType'] {
   const conn = (navigator as any).connection;
-  if (!conn) return 'unknown' as any;
+  if (!conn) return 'cellular'; // safe fallback for mobile
   if (conn.type === 'wifi') return 'wifi';
   if (conn.type === 'cellular') return 'cellular';
   if (conn.type === 'none') return 'none';
-  return 'cellular'; // default assumption for mobile
+  return 'cellular';
 }
