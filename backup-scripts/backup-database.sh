@@ -11,13 +11,15 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/backup.conf"
 
 # Defaults (overridden by backup.conf)
-BACKUP_DIR="${BACKUP_DIR:-/backups/postgres}"
+BACKUP_BASE="${BACKUP_DIR:-/backups}"
+BACKUP_DIR="${BACKUP_BASE}/postgres"
 DB_HOST="${DB_HOST:-localhost}"
 DB_PORT="${DB_PORT:-5432}"
 DB_USER="${DB_USER:-replication_user}"
 DB_NAME="${DB_NAME:-crm_production}"
 ENCRYPT="${ENCRYPT_BACKUPS:-true}"
 GPG_RECIPIENT="${GPG_RECIPIENT:-}"
+PASSPHRASE_FILE="${BACKUP_PASSPHRASE_FILE:-${SCRIPT_DIR}/.backup-passphrase}"
 RETENTION_DAYS="${LOCAL_RETENTION_DAYS:-7}"
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 LOG_FILE="${LOG_DIR:-/var/log}/crm-backup.log"
@@ -97,12 +99,17 @@ if [ "$ENCRYPT" = true ] && [ -n "$GPG_RECIPIENT" ]; then
   rm -f "$FINAL_FILE"
   FINAL_FILE="${FINAL_FILE}.gpg"
 elif [ "$ENCRYPT" = true ]; then
-  log "Encrypting backup with symmetric AES-256"
-  gpg --batch --yes --symmetric --cipher-algo AES256 \
-    --passphrase-file "${SCRIPT_DIR}/.backup-passphrase" \
-    --output "${FINAL_FILE}.gpg" "$FINAL_FILE"
-  rm -f "$FINAL_FILE"
-  FINAL_FILE="${FINAL_FILE}.gpg"
+  if [ ! -f "$PASSPHRASE_FILE" ]; then
+    log "WARNING: Passphrase file not found at ${PASSPHRASE_FILE} — skipping encryption"
+    log "Run setup.sh to generate one, or create it: head -c 32 /dev/urandom | base64 > ${PASSPHRASE_FILE}"
+  else
+    log "Encrypting backup with symmetric AES-256"
+    gpg --batch --yes --symmetric --cipher-algo AES256 \
+      --passphrase-file "$PASSPHRASE_FILE" \
+      --output "${FINAL_FILE}.gpg" "$FINAL_FILE"
+    rm -f "$FINAL_FILE"
+    FINAL_FILE="${FINAL_FILE}.gpg"
+  fi
 fi
 
 BACKUP_SIZE=$(du -sh "$FINAL_FILE" | cut -f1)

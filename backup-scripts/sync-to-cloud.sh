@@ -30,9 +30,14 @@ for arg in "$@"; do
 done
 
 # If a specific file was passed, sync just that file
+SOURCE_DIR=""
+SOURCE_FILE=""
 if [ -n "$SOURCE" ] && [ -f "$SOURCE" ]; then
   SOURCE_DIR="$(dirname "$SOURCE")"
   SOURCE_FILE="$(basename "$SOURCE")"
+elif [ -n "$SOURCE" ] && [ ! -f "$SOURCE" ]; then
+  log "WARNING: --source=${SOURCE} is not a file, syncing full backup directory instead"
+  SOURCE=""
 fi
 
 # ---- Sync to Google Drive ----

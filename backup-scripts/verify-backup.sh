@@ -60,8 +60,15 @@ check_freshness() {
     return
   fi
 
+  local mtime
+  mtime=$(stat -c %Y "$latest" 2>/dev/null || stat -f %m "$latest" 2>/dev/null || echo "")
+  if [ -z "$mtime" ]; then
+    fail "${label}: could not stat ${latest}"
+    return
+  fi
+
   local age_seconds
-  age_seconds=$(( $(date +%s) - $(stat -c %Y "$latest" 2>/dev/null || stat -f %m "$latest" 2>/dev/null) ))
+  age_seconds=$(( $(date +%s) - mtime ))
   local age_hours=$(( age_seconds / 3600 ))
 
   if [ "$age_hours" -gt "$max_hours" ]; then
@@ -80,7 +87,7 @@ check_freshness "${BACKUP_DIR}/code" "Code bundle" 48
 log ""
 log "--- File Integrity ---"
 
-for f in "${BACKUP_DIR}/postgres/base/"*.tar.gz 2>/dev/null; do
+for f in "${BACKUP_DIR}/postgres/base/"*.tar.gz; do
   [ -f "$f" ] || continue
   if gzip -t "$f" 2>/dev/null; then
     pass "Archive OK: $(basename "$f")"
@@ -89,7 +96,7 @@ for f in "${BACKUP_DIR}/postgres/base/"*.tar.gz 2>/dev/null; do
   fi
 done
 
-for f in "${BACKUP_DIR}/postgres/base/"*.gpg "${BACKUP_DIR}/postgres/logical/"*.gpg 2>/dev/null; do
+for f in "${BACKUP_DIR}/postgres/base/"*.gpg "${BACKUP_DIR}/postgres/logical/"*.gpg; do
   [ -f "$f" ] || continue
   if gpg --list-packets "$f" > /dev/null 2>&1; then
     pass "Encrypted file OK: $(basename "$f")"
@@ -98,7 +105,7 @@ for f in "${BACKUP_DIR}/postgres/base/"*.gpg "${BACKUP_DIR}/postgres/logical/"*.
   fi
 done
 
-for f in "${BACKUP_DIR}/code/"*.bundle 2>/dev/null; do
+for f in "${BACKUP_DIR}/code/"*.bundle; do
   [ -f "$f" ] || continue
   if git bundle verify "$f" > /dev/null 2>&1; then
     pass "Git bundle OK: $(basename "$f")"
@@ -151,7 +158,12 @@ log "--- Cloud Sync Status ---"
 if command -v rclone &> /dev/null; then
   for remote_name in "${GDRIVE_REMOTE:-gdrive}" "${S3_REMOTE:-s3}" "${ONEDRIVE_REMOTE:-onedrive}"; do
     if rclone listremotes 2>/dev/null | grep -q "^${remote_name}:"; then
-      SIZE=$(rclone size "${remote_name}:CRM-Backups" --json 2>/dev/null | grep -o '"bytes":[0-9]*' | cut -d: -f2 || echo "unknown")
+      local json_out
+      json_out=$(rclone size "${remote_name}:CRM-Backups" --json 2>/dev/null || echo "")
+      SIZE="unknown"
+      if [ -n "$json_out" ]; then
+        SIZE=$(echo "$json_out" | grep -o '"bytes":[0-9]*' | cut -d: -f2 || echo "unknown")
+      fi
       if [ "$SIZE" != "unknown" ] && [ "$SIZE" -gt 0 ] 2>/dev/null; then
         pass "${remote_name}: cloud backup exists (${SIZE} bytes)"
       else
@@ -172,8 +184,7 @@ if [ -d "$BACKUP_DIR" ]; then
   if [ "$USAGE" -gt 90 ]; then
     fail "Backup disk is ${USAGE}% full — cleanup needed"
   elif [ "$USAGE" -gt 75 ]; then
-    log "WARNING: Backup disk is ${USAGE}% full"
-    pass "Backup disk usage acceptable (${USAGE}%)"
+    fail "Backup disk is ${USAGE}% full — cleanup recommended"
   else
     pass "Backup disk usage healthy (${USAGE}%)"
   fi

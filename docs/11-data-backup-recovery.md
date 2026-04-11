@@ -7,6 +7,32 @@ cloud storage.
 This guide covers **automated backup**, **manual backup**, **cloud sync**, and
 **recovery procedures** for every data store in the platform.
 
+All scripts live in the `backup-scripts/` directory. Run `setup.sh` to
+bootstrap everything interactively.
+
+---
+
+## Quick start
+
+```bash
+cd backup-scripts/
+
+# 1. Run the interactive setup (creates dirs, config, encryption, scheduling)
+sudo ./setup.sh
+
+# 2. Test a database backup
+./backup-database.sh --logical --sync
+
+# 3. Test a file backup
+./backup-files.sh
+
+# 4. Verify everything
+./verify-backup.sh
+
+# 5. View logs
+tail -f /var/log/crm-backup.log
+```
+
 ---
 
 ## Backup philosophy
@@ -44,68 +70,53 @@ This guide covers **automated backup**, **manual backup**, **cloud sync**, and
 WAL (Write-Ahead Log) archiving captures every change as it happens, enabling
 point-in-time recovery to any second within the retention window.
 
+**Script**: `backup-scripts/archive-wal.sh` — called by PostgreSQL on every WAL
+segment rotation. Compresses with gzip, optionally syncs to cloud, and cleans up
+segments older than `WAL_RETENTION_DAYS`.
+
 ```bash
 # postgresql.conf — enable WAL archiving
 archive_mode = on
-archive_command = 'backup-scripts/archive-wal.sh %p %f'
+archive_command = '/opt/crm/backup-scripts/archive-wal.sh %p %f'
 wal_level = replica
 ```
 
 ### 1b. Full database backup (daily)
 
-```bash
-# Run daily via cron or systemd timer
-pg_basebackup \
-  -h localhost \
-  -U replication_user \
-  -D /backups/postgres/base/$(date +%Y-%m-%d) \
-  --wal-method=stream \
-  --checkpoint=fast \
-  --compress=gzip \
-  --progress
+**Script**: `backup-scripts/backup-database.sh` — handles physical backup,
+tarball creation, AES-256 encryption, and optional cloud sync.
 
-# Encrypt the backup
-gpg --symmetric --cipher-algo AES256 \
-  --output /backups/postgres/base/$(date +%Y-%m-%d).tar.gz.gpg \
-  /backups/postgres/base/$(date +%Y-%m-%d).tar.gz
+```bash
+# Physical backup (pg_basebackup) with encryption and cloud sync
+./backup-database.sh --sync
+
+# Logical backup (pg_dump) — portable, human-readable
+./backup-database.sh --logical --sync
 ```
 
-### 1c. Logical backup (portable, human-readable)
+### 1c. Restore from backup
+
+**Script**: `backup-scripts/restore-database.sh` — handles decryption, cloud
+download, restore, and post-restore verification. Cleans up temp files
+automatically.
 
 ```bash
-# Full logical dump — useful for migration or smaller databases
-pg_dump \
-  --format=custom \
-  --compress=9 \
-  --file=/backups/postgres/logical/crm_$(date +%Y%m%d_%H%M%S).dump \
-  crm_production
+# Restore from a local backup
+./restore-database.sh --backup=/backups/postgres/logical/crm_20260411.dump
 
-# Per-tenant backup (for tenant isolation)
-pg_dump \
-  --format=custom \
-  --compress=9 \
-  --table="*" \
-  --file=/backups/postgres/tenants/tenant_${TENANT_ID}_$(date +%Y%m%d).dump \
-  --where="tenant_id='${TENANT_ID}'" \
-  crm_production
-```
+# Restore from Google Drive
+./restore-database.sh --from-cloud=gdrive
 
-### 1d. Restore from backup
+# Restore from personal drive
+./restore-database.sh --from-cloud=personal
 
-```bash
-# PITR restore to a specific point in time
-pg_restore \
-  --dbname=crm_recovery \
-  --jobs=4 \
-  /backups/postgres/logical/crm_20260411_020000.dump
+# Point-in-time recovery (physical backup)
+./restore-database.sh \
+  --backup=/backups/postgres/base/crm_base_20260411.tar.gz \
+  --target-time="2026-04-11 14:30:00 UTC"
 
-# Full cluster restore from base backup
-# 1. Stop the server
-# 2. Replace data directory with backup
-# 3. Configure recovery.conf / recovery.signal
-restore_command = 'cp /backups/postgres/wal/%f %p'
-recovery_target_time = '2026-04-11 14:30:00 UTC'
-# 4. Start the server — it replays WAL to the target time
+# Skip confirmation prompt (for automation)
+./restore-database.sh --from-cloud=s3 --yes
 ```
 
 ---
@@ -233,59 +244,65 @@ rclone copy /backups/code /mnt/personal-drive/CRM-Backups/code --progress
 
 ## 4. Automated backup scheduling
 
+The `setup.sh` script installs scheduling automatically. Choose cron, systemd
+timers, or both during setup.
+
 ### 4a. Cron-based schedule
+
+Installed to `/etc/cron.d/crm-backup` by `setup.sh`:
 
 ```bash
 # /etc/cron.d/crm-backup
 
 # Database: full backup daily at 2 AM
-0 2 * * * root /opt/crm/backup-scripts/backup-database.sh >> /var/log/crm-backup.log 2>&1
+0 2 * * * root /opt/crm/backup-scripts/backup-database.sh
 
 # Database: logical dump every 6 hours
-0 */6 * * * root /opt/crm/backup-scripts/backup-database-logical.sh >> /var/log/crm-backup.log 2>&1
+0 */6 * * * root /opt/crm/backup-scripts/backup-database.sh --logical
 
 # Files: sync uploads every hour
-0 * * * * root /opt/crm/backup-scripts/backup-files.sh >> /var/log/crm-backup.log 2>&1
+0 * * * * root /opt/crm/backup-scripts/backup-files.sh --uploads-only
+
+# Files: full file backup (uploads + config + code) daily at 3 AM
+0 3 * * * root /opt/crm/backup-scripts/backup-files.sh
 
 # Cloud sync: push to personal drive/cloud every 4 hours
-0 */4 * * * root /opt/crm/backup-scripts/sync-to-cloud.sh >> /var/log/crm-backup.log 2>&1
+0 */4 * * * root /opt/crm/backup-scripts/sync-to-cloud.sh
 
 # Config: back up on every change (via inotifywait)
-# Handled by backup-scripts/watch-config.sh (runs as a systemd service)
+# Runs as a systemd service: crm-config-watcher.service
+# Script: backup-scripts/watch-config.sh
 
-# Cleanup: remove local backups older than 30 days
-0 3 * * 0 root /opt/crm/backup-scripts/cleanup-old-backups.sh >> /var/log/crm-backup.log 2>&1
+# Cleanup: remove old backups weekly on Sunday at 3 AM
+0 3 * * 0 root /opt/crm/backup-scripts/cleanup-old-backups.sh
 
-# Verify: test restore weekly
-0 4 * * 6 root /opt/crm/backup-scripts/verify-backup.sh >> /var/log/crm-backup.log 2>&1
+# Verify: test restore weekly on Saturday at 4 AM
+0 4 * * 6 root /opt/crm/backup-scripts/verify-backup.sh
 ```
 
-### 4b. Systemd timer (alternative to cron)
+### 4b. Systemd timers
 
-```ini
-# /etc/systemd/system/crm-backup.timer
-[Unit]
-Description=CRM Database Backup Timer
+Installed by `setup.sh` when systemd is chosen. Includes timers for:
 
-[Timer]
-OnCalendar=*-*-* 02:00:00
-Persistent=true
+| Timer | Schedule | Script |
+|---|---|---|
+| `crm-backup-db.timer` | Daily 2 AM | `backup-database.sh --sync` |
+| `crm-backup-db-logical.timer` | Every 6 hours | `backup-database.sh --logical` |
+| `crm-backup-files.timer` | Hourly | `backup-files.sh` |
+| `crm-backup-sync.timer` | Every 4 hours | `sync-to-cloud.sh` |
+| `crm-backup-cleanup.timer` | Weekly Sunday 3 AM | `cleanup-old-backups.sh` |
+| `crm-backup-verify.timer` | Weekly Saturday 4 AM | `verify-backup.sh` |
+| `crm-config-watcher.service` | Continuous | `watch-config.sh` |
 
-[Install]
-WantedBy=timers.target
-```
+```bash
+# Check timer status
+systemctl list-timers 'crm-*'
 
-```ini
-# /etc/systemd/system/crm-backup.service
-[Unit]
-Description=CRM Database Backup
-After=postgresql.service
+# Manually trigger a backup
+systemctl start crm-backup-db.service
 
-[Service]
-Type=oneshot
-ExecStart=/opt/crm/backup-scripts/backup-database.sh
-User=backup
-Group=backup
+# View logs
+journalctl -u crm-backup-db.service
 ```
 
 ---
@@ -325,9 +342,8 @@ When the application crashes unexpectedly:
 # Mount your personal drive
 mount /dev/sdb1 /mnt/personal-drive
 
-# Restore database backup
-cp /mnt/personal-drive/CRM-Backups/postgres/base/2026-04-11.tar.gz.gpg /tmp/
-gpg --decrypt /tmp/2026-04-11.tar.gz.gpg | tar xzf - -C /var/lib/postgresql/data/
+# Restore database (handles decryption, restore, and verification)
+./restore-database.sh --from-cloud=personal
 
 # Restore uploads
 rclone sync /mnt/personal-drive/CRM-Backups/uploads /data/uploads --progress
@@ -336,20 +352,14 @@ rclone sync /mnt/personal-drive/CRM-Backups/uploads /data/uploads --progress
 ### 5c. Recovery from cloud (Google Drive / S3)
 
 ```bash
-# Pull latest backup from Google Drive
-rclone copy gdrive:CRM-Backups/postgres/base/ /tmp/restore/ \
-  --include="*.dump" \
-  --max-age=24h \
-  --progress
+# Restore from Google Drive (downloads, decrypts, restores, verifies)
+./restore-database.sh --from-cloud=gdrive
 
-# Pull from S3
-rclone copy s3:crm-backups-bucket/postgres/base/ /tmp/restore/ \
-  --include="*.dump" \
-  --max-age=24h \
-  --progress
+# Restore from S3
+./restore-database.sh --from-cloud=s3
 
-# Restore
-pg_restore --dbname=crm_production --jobs=4 --clean /tmp/restore/latest.dump
+# Restore uploads from cloud
+rclone sync gdrive:CRM-Backups/uploads /data/uploads --progress
 ```
 
 ---
@@ -404,11 +414,13 @@ rclone size s3:crm-backups-bucket
 
 | Location | Retention | Cleanup |
 |---|---|---|
-| Local disk | 7 days (full), 24h (WAL) | Automated weekly |
-| Personal drive | 30 days | Automated monthly |
-| Cloud (S3/GDrive) | 90 days (standard), 1 year (archive) | Lifecycle policy |
+| Local disk | 7 days (full), 3 days (WAL) | `cleanup-old-backups.sh` (weekly) |
+| Personal drive | 30 days | `cleanup-old-backups.sh` (weekly) |
+| Cloud (S3/GDrive) | 90 days (standard), 1 year (archive) | `cleanup-old-backups.sh` + lifecycle policy |
 | Cross-region (DR) | 90 days | Lifecycle policy |
 | Legal hold | 7 years | Manual release |
+
+Run `cleanup-old-backups.sh --dry-run` to preview what would be deleted.
 
 ### Lifecycle rules (S3 example)
 
@@ -483,3 +495,22 @@ Is the database intact?
 
 See [07-disaster-recovery-runbook.md](07-disaster-recovery-runbook.md) for
 full incident procedures.
+
+---
+
+## Scripts reference
+
+All scripts are in the `backup-scripts/` directory.
+
+| Script | Purpose | Key flags |
+|---|---|---|
+| `setup.sh` | Interactive installer: creates dirs, encryption, cloud config, scheduling | Run once with `sudo` |
+| `backup-database.sh` | Postgres backup (physical or logical) with encryption | `--logical`, `--sync` |
+| `backup-files.sh` | Back up uploads, config, and git repo | `--config-only`, `--uploads-only` |
+| `sync-to-cloud.sh` | Sync backups to Google Drive, S3, OneDrive, or personal drive | `--source=<file>`, `--destination=<name>` |
+| `restore-database.sh` | Restore DB from local, cloud, or personal drive | `--backup=<path>`, `--from-cloud=<src>`, `--target-time=<ts>` |
+| `verify-backup.sh` | Validate freshness, integrity, restore capability, disk space | `--full`, `--post-restore` |
+| `archive-wal.sh` | Archive WAL segments (called by PostgreSQL `archive_command`) | `%p %f` (Postgres passes these) |
+| `cleanup-old-backups.sh` | Remove old backups per retention policy | `--dry-run` |
+| `watch-config.sh` | Watch config dirs for changes, auto-backup on modification | Runs as systemd service |
+| `backup.conf` | Shared configuration for all scripts | Edit after `setup.sh` |

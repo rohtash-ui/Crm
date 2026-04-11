@@ -18,10 +18,21 @@ DB_NAME="${DB_NAME:-crm_production}"
 RESTORE_DB="${RESTORE_DB:-crm_recovery}"
 LOG_FILE="${LOG_DIR:-/var/log}/crm-backup.log"
 
+PG_DATA_DIR="${PG_DATA_DIR:-/var/lib/postgresql}"
+
 BACKUP_PATH=""
 TARGET_TIME=""
 FROM_CLOUD=""
 SKIP_CONFIRM=false
+DOWNLOAD_DIR=""
+
+cleanup_temp() {
+  if [ -n "$DOWNLOAD_DIR" ] && [ -d "$DOWNLOAD_DIR" ]; then
+    log "Cleaning up temp directory: ${DOWNLOAD_DIR}"
+    rm -rf "$DOWNLOAD_DIR"
+  fi
+}
+trap cleanup_temp EXIT
 
 for arg in "$@"; do
   case $arg in
@@ -67,10 +78,19 @@ if [ -n "$FROM_CLOUD" ]; then
         exit 1
       fi
       log "Copying latest backup from personal drive..."
-      cp "$DRIVE_PATH"/*.dump "$DOWNLOAD_DIR/" 2>/dev/null || \
-      cp "$DRIVE_PATH"/*.tar.gz "$DOWNLOAD_DIR/" 2>/dev/null || \
-      cp "$DRIVE_PATH"/*.gpg "$DOWNLOAD_DIR/" 2>/dev/null || \
-        { log "ERROR: No backup files found on personal drive"; exit 1; }
+      local found=false
+      for ext in dump tar.gz gpg; do
+        for f in "$DRIVE_PATH"/*."$ext"; do
+          if [ -f "$f" ]; then
+            cp "$f" "$DOWNLOAD_DIR/"
+            found=true
+          fi
+        done
+      done
+      if [ "$found" = false ]; then
+        log "ERROR: No backup files found on personal drive"
+        exit 1
+      fi
       ;;
     *)
       log "ERROR: Unknown cloud source: ${FROM_CLOUD}. Use: gdrive, s3, personal"
@@ -158,7 +178,7 @@ if [[ "$RESTORE_FILE" == *.dump ]]; then
 
 elif [[ "$RESTORE_FILE" == *.tar.gz ]]; then
   # Physical restore (base backup)
-  RESTORE_DIR="/var/lib/postgresql/restore-${RESTORE_DB}"
+  RESTORE_DIR="${PG_DATA_DIR}/restore-${RESTORE_DB}"
   log "Extracting base backup to ${RESTORE_DIR}"
   mkdir -p "$RESTORE_DIR"
   tar xzf "$RESTORE_FILE" -C "$RESTORE_DIR"

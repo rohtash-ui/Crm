@@ -51,8 +51,9 @@ if [ "$UPLOADS_ONLY" = false ]; then
   CONFIG_ARCHIVE="${BACKUP_DIR}/config/app-config-${TIMESTAMP}.tar.gz"
   log "Backing up application config"
 
+  APP_DIR="${APP_DIR:-/app}"
   CONFIG_FILES=()
-  for path in "$CONFIG_DIR" /app/.env.example /app/helm; do
+  for path in "$CONFIG_DIR" "${APP_DIR}/.env.example" "${APP_DIR}/helm"; do
     if [ -e "$path" ]; then
       CONFIG_FILES+=("$path")
     fi
