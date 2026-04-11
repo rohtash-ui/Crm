@@ -42,6 +42,7 @@ var AllowedEntityTypes = map[string]bool{
 	"activity": true,
 	"lead":     true,
 	"account":  true,
+	"note":     true,
 }
 
 // --- Input / Output types ---

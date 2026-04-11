@@ -31,6 +31,7 @@ func tableForEntityType(entityType string) (string, error) {
 		"activity": "activities",
 		"lead":     "leads",
 		"account":  "accounts",
+		"note":     "notes",
 	}
 	table, ok := tables[entityType]
 	if !ok {
@@ -210,6 +211,7 @@ func (r *PostgresEntityRepository) FetchUpdatedSince(ctx context.Context, tenant
 		"activity": "activities",
 		"lead":     "leads",
 		"account":  "accounts",
+		"note":     "notes",
 	} {
 		query := fmt.Sprintf(
 			`SELECT id, version, data, updated_at FROM %s

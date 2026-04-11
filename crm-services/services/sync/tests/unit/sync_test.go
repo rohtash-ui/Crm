@@ -391,6 +391,71 @@ func TestProcessSync_EmitsEvents(t *testing.T) {
 	}
 }
 
+func TestProcessSync_CreateNote(t *testing.T) {
+	repo := newFakeRepo()
+	svc := domain.NewSyncService(repo, newFakeIdempotency(), newFakeEvents())
+
+	result, err := svc.ProcessSync(context.Background(), domain.SyncInput{
+		TenantID: "tenant-1",
+		UserID:   "user-1",
+		Changes: []domain.Change{
+			{
+				IdempotencyKey: "key-note-1",
+				EntityType:     "note",
+				EntityID:       "note-1",
+				Action:         domain.ActionCreate,
+				Payload: map[string]interface{}{
+					"entity_type":     "lead",
+					"entity_id":       "lead-1",
+					"content":         "Spoke with the client about pricing",
+					"note_type":       "call",
+					"author_name":     "John Doe",
+					"external_id":     "nfs-note-123",
+					"external_source": "nfs_mecntech",
+				},
+				BaseVersion:    0,
+				ClientTimestamp: time.Now(),
+			},
+		},
+	})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(result.Results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(result.Results))
+	}
+
+	if result.Results[0].Status != domain.StatusApplied {
+		t.Errorf("expected status Applied, got %s", result.Results[0].Status)
+	}
+
+	if result.Results[0].NewVersion != 1 {
+		t.Errorf("expected version 1, got %d", result.Results[0].NewVersion)
+	}
+
+	// Verify the note was stored
+	entity, err := repo.GetEntity(context.Background(), "tenant-1", "note", "note-1")
+	if err != nil {
+		t.Fatalf("failed to get note: %v", err)
+	}
+
+	if entity.Data["content"] != "Spoke with the client about pricing" {
+		t.Errorf("expected note content, got %v", entity.Data["content"])
+	}
+
+	if entity.Data["external_source"] != "nfs_mecntech" {
+		t.Errorf("expected external_source nfs_mecntech, got %v", entity.Data["external_source"])
+	}
+}
+
+func TestProcessSync_NoteEntityTypeAllowed(t *testing.T) {
+	if !domain.AllowedEntityTypes["note"] {
+		t.Error("'note' entity type should be in AllowedEntityTypes")
+	}
+}
+
 func TestFetchUpdates(t *testing.T) {
 	repo := newFakeRepo()
 	svc := domain.NewSyncService(repo, newFakeIdempotency(), newFakeEvents())
