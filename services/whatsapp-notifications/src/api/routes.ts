@@ -19,7 +19,10 @@ const updatePreferencesSchema = z.object({
   quietHoursEnd: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   timezone: z.string(),
   minScoreTierForAlert: z.enum(['hot', 'warm', 'cold']),
-});
+}).refine(
+  (data) => (!data.quietHoursStart && !data.quietHoursEnd) || (!!data.quietHoursStart && !!data.quietHoursEnd),
+  { message: 'quietHoursStart and quietHoursEnd must both be provided or both be absent' },
+);
 
 const whatsappConfigSchema = z.object({
   businessAccountId: z.string().min(1),
@@ -71,7 +74,7 @@ export function createRoutes(db: NotificationDatabase, whatsappClient: WhatsAppC
       });
     } catch (error) {
       logger.error({ error }, 'Failed to get agent preferences');
-      res.status(500).json({ error: 'Internal server error' });
+      return void res.status(500).json({ error: 'Internal server error' });
     }
   });
 
@@ -103,10 +106,10 @@ export function createRoutes(db: NotificationDatabase, whatsappClient: WhatsAppC
         },
       );
 
-      res.json({ success: true, message: 'Preferences updated' });
+      return void res.json({ success: true, message: 'Preferences updated' });
     } catch (error) {
       logger.error({ error }, 'Failed to update agent preferences');
-      res.status(500).json({ error: 'Internal server error' });
+      return void res.status(500).json({ error: 'Internal server error' });
     }
   });
 
@@ -126,10 +129,10 @@ export function createRoutes(db: NotificationDatabase, whatsappClient: WhatsAppC
       }
 
       await db.updateAgentWhatsappNumber(tenantId, agentId, whatsappNumber);
-      res.json({ success: true, message: 'WhatsApp number updated' });
+      return void res.json({ success: true, message: 'WhatsApp number updated' });
     } catch (error) {
       logger.error({ error }, 'Failed to update WhatsApp number');
-      res.status(500).json({ error: 'Internal server error' });
+      return void res.status(500).json({ error: 'Internal server error' });
     }
   });
 
@@ -158,10 +161,10 @@ export function createRoutes(db: NotificationDatabase, whatsappClient: WhatsAppC
         offsetParam,
       );
 
-      res.json(result);
+      return void res.json(result);
     } catch (error) {
       logger.error({ error }, 'Failed to get notification history');
-      res.status(500).json({ error: 'Internal server error' });
+      return void res.status(500).json({ error: 'Internal server error' });
     }
   });
 
@@ -177,7 +180,7 @@ export function createRoutes(db: NotificationDatabase, whatsappClient: WhatsAppC
 
       const messages = await db.getMessagesByLead(tenantId, leadId);
 
-      res.json({
+      return void res.json({
         leadId,
         totalMessages: messages.length,
         messages: messages.map((m) => ({
@@ -194,7 +197,7 @@ export function createRoutes(db: NotificationDatabase, whatsappClient: WhatsAppC
       });
     } catch (error) {
       logger.error({ error }, 'Failed to get lead notifications');
-      res.status(500).json({ error: 'Internal server error' });
+      return void res.status(500).json({ error: 'Internal server error' });
     }
   });
 
@@ -210,14 +213,14 @@ export function createRoutes(db: NotificationDatabase, whatsappClient: WhatsAppC
 
       const messages = await db.getMessagesByAgent(tenantId, agentId);
 
-      res.json({
+      return void res.json({
         agentId,
         totalMessages: messages.length,
         messages,
       });
     } catch (error) {
       logger.error({ error }, 'Failed to get agent notifications');
-      res.status(500).json({ error: 'Internal server error' });
+      return void res.status(500).json({ error: 'Internal server error' });
     }
   });
 
@@ -234,10 +237,10 @@ export function createRoutes(db: NotificationDatabase, whatsappClient: WhatsAppC
       const days = req.query.days ? parseInt(req.query.days as string) : 30;
 
       const stats = await db.getNotificationStats(tenantId, days);
-      res.json(stats);
+      return void res.json(stats);
     } catch (error) {
       logger.error({ error }, 'Failed to get notification stats');
-      res.status(500).json({ error: 'Internal server error' });
+      return void res.status(500).json({ error: 'Internal server error' });
     }
   });
 
@@ -258,13 +261,13 @@ export function createRoutes(db: NotificationDatabase, whatsappClient: WhatsAppC
       }
 
       // Redact sensitive fields
-      res.json({
+      return void res.json({
         ...config,
         webhookVerifyToken: '********',
       });
     } catch (error) {
       logger.error({ error }, 'Failed to get WhatsApp config');
-      res.status(500).json({ error: 'Internal server error' });
+      return void res.status(500).json({ error: 'Internal server error' });
     }
   });
 
@@ -283,10 +286,10 @@ export function createRoutes(db: NotificationDatabase, whatsappClient: WhatsAppC
       }
 
       await db.upsertWhatsAppConfig({ tenantId, ...parsed.data });
-      res.json({ success: true, message: 'WhatsApp configuration updated' });
+      return void res.json({ success: true, message: 'WhatsApp configuration updated' });
     } catch (error) {
       logger.error({ error }, 'Failed to update WhatsApp config');
-      res.status(500).json({ error: 'Internal server error' });
+      return void res.status(500).json({ error: 'Internal server error' });
     }
   });
 
@@ -301,10 +304,10 @@ export function createRoutes(db: NotificationDatabase, whatsappClient: WhatsAppC
       const tenantId = requireTenantId(req, res);
       if (!tenantId) return;
       const templates = await db.getTemplates(tenantId);
-      res.json({ templates });
+      return void res.json({ templates });
     } catch (error) {
       logger.error({ error }, 'Failed to get templates');
-      res.status(500).json({ error: 'Internal server error' });
+      return void res.status(500).json({ error: 'Internal server error' });
     }
   });
 
@@ -344,10 +347,10 @@ export function createRoutes(db: NotificationDatabase, whatsappClient: WhatsAppC
         }, 'Message status updated via webhook');
       }
 
-      res.status(200).json({ received: true });
+      return void res.status(200).json({ received: true });
     } catch (error) {
       logger.error({ error }, 'Failed to process webhook');
-      res.status(200).json({ received: true }); // Always 200 to avoid retries from Meta
+      return void res.status(200).json({ received: true }); // Always 200 to avoid retries from Meta
     }
   });
 
@@ -363,7 +366,7 @@ export function createRoutes(db: NotificationDatabase, whatsappClient: WhatsAppC
       if (!tenantId) return;
       const agents = await db.getAgentsByTenant(tenantId);
 
-      res.json({
+      return void res.json({
         agents: agents.map((a) => ({
           id: a.id,
           name: a.name,
@@ -376,7 +379,7 @@ export function createRoutes(db: NotificationDatabase, whatsappClient: WhatsAppC
       });
     } catch (error) {
       logger.error({ error }, 'Failed to get agents');
-      res.status(500).json({ error: 'Internal server error' });
+      return void res.status(500).json({ error: 'Internal server error' });
     }
   });
 

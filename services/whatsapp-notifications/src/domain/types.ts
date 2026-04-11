@@ -62,7 +62,7 @@ export interface Agent {
   tenantId: string;
   name: string;
   email: string;
-  whatsappNumber: string;  // E.164 format: +1234567890
+  whatsappNumber?: string;  // E.164 format: +1234567890 — optional until agent configures it
   role: 'admin' | 'manager' | 'agent';
   isActive: boolean;
   notificationPreferences: NotificationPreferences;

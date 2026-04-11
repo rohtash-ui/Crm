@@ -317,7 +317,7 @@ export class NotificationDatabase {
       tenantId: row.tenant_id as string,
       name: row.name as string,
       email: row.email as string,
-      whatsappNumber: row.whatsapp_number as string,
+      whatsappNumber: row.whatsapp_number as string | undefined,
       role: row.role as Agent['role'],
       isActive: row.is_active as boolean,
       notificationPreferences: typeof row.notification_preferences === 'string'

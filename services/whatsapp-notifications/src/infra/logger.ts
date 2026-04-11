@@ -8,7 +8,8 @@ export const logger = pino({
   },
   timestamp: pino.stdTimeFunctions.isoTime,
   redact: {
-    paths: ['req.headers.authorization', '*.accessToken', '*.whatsappNumber'],
+    // Redact secrets but not phone numbers — agents need to know which number failed
+    paths: ['req.headers.authorization', '*.accessToken', '*.webhookVerifyToken', '*.password'],
     censor: '[REDACTED]',
   },
 });
