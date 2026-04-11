@@ -248,6 +248,11 @@ func TestProcessSync_VersionConflict(t *testing.T) {
 	if result.Results[0].ServerData == nil {
 		t.Error("expected server data in conflict result")
 	}
+
+	// NewVersion in the conflict result should be the server's current version
+	if result.Results[0].NewVersion != 3 {
+		t.Errorf("expected server version 3 in conflict result, got %d", result.Results[0].NewVersion)
+	}
 }
 
 func TestProcessSync_DeleteEntity(t *testing.T) {

@@ -91,8 +91,8 @@ func (h *Handler) handleSync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(req.Changes) > 100 {
-		http.Error(w, `{"error":"batch size exceeds maximum of 100"}`, http.StatusBadRequest)
+	if len(req.Changes) > domain.MaxBatchSize {
+		http.Error(w, fmt.Sprintf(`{"error":"batch size exceeds maximum of %d"}`, domain.MaxBatchSize), http.StatusBadRequest)
 		return
 	}
 

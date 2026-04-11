@@ -43,6 +43,8 @@ export interface ConflictRecord {
   entityId: string;
   localVersion: Record<string, unknown>;
   serverVersion: Record<string, unknown>;
+  /** The server entity's version number — required for optimistic locking on conflict resolution. */
+  serverEntityVersion: number;
   localTimestamp: number;
   serverTimestamp: number;
   resolvedAt?: number;
@@ -200,6 +202,7 @@ export class OfflineStore {
 
   async clearSyncedEntries(): Promise<void> {
     const synced = await this.getAllByIndex<ChangeEntry>('outbox', 'byStatus', 'synced');
+    this.ensureDb();
     const tx = this.db!.transaction('outbox', 'readwrite');
     const store = tx.objectStore('outbox');
     for (const entry of synced) {
@@ -275,7 +278,7 @@ export class OfflineStore {
   }
 
   async evictLRU(targetBytes: number = DEFAULT_MAX_STORAGE_BYTES): Promise<number> {
-    const currentUsage = await this.estimateStorageUsage();
+    let currentUsage = await this.estimateStorageUsage();
     if (currentUsage <= targetBytes) return 0;
 
     // Get entity IDs that have pending outbox entries — never evict these
@@ -290,13 +293,17 @@ export class OfflineStore {
 
     let evictedCount = 0;
     for (const entity of allEntities) {
-      if (currentUsage <= targetBytes) break;
-
       const key = `${entity.entityType}:${entity.entityId}`;
       if (pendingEntityKeys.has(key)) continue; // never evict records with pending changes
 
       await this.deleteEntity(entity.entityType, entity.entityId);
       evictedCount++;
+
+      // Re-estimate after every 10 evictions to avoid excessive Storage API calls
+      if (evictedCount % 10 === 0) {
+        currentUsage = await this.estimateStorageUsage();
+        if (currentUsage <= targetBytes) break;
+      }
     }
 
     return evictedCount;

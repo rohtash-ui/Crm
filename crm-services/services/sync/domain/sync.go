@@ -7,6 +7,7 @@ package domain
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 )
@@ -304,7 +305,7 @@ func (s *SyncService) applyCreate(ctx context.Context, tenantID, userID string, 
 
 func (s *SyncService) applyUpdate(ctx context.Context, tenantID, userID string, change Change) ChangeResult {
 	entity, err := s.repo.UpdateEntity(ctx, tenantID, change.EntityType, change.EntityID, change.Payload, change.BaseVersion)
-	if err == ErrVersionConflict {
+	if errors.Is(err, ErrVersionConflict) {
 		// Fetch current server state for conflict resolution
 		current, fetchErr := s.repo.GetEntity(ctx, tenantID, change.EntityType, change.EntityID)
 		if fetchErr != nil {
@@ -356,7 +357,7 @@ func (s *SyncService) applyUpdate(ctx context.Context, tenantID, userID string, 
 
 func (s *SyncService) applyDelete(ctx context.Context, tenantID, userID string, change Change) ChangeResult {
 	err := s.repo.DeleteEntity(ctx, tenantID, change.EntityType, change.EntityID, change.BaseVersion)
-	if err == ErrVersionConflict {
+	if errors.Is(err, ErrVersionConflict) {
 		current, fetchErr := s.repo.GetEntity(ctx, tenantID, change.EntityType, change.EntityID)
 		if fetchErr != nil {
 			return ChangeResult{

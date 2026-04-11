@@ -248,25 +248,27 @@ export class SyncEngine {
     if (resolution === 'local') {
       const conflict = await this.store.getConflict(entityType, entityId);
       if (conflict) {
-        // Re-queue the local version as a forced update
-        await this.write(entityType, entityId, 'update', conflict.localVersion, 0);
+        // Re-queue local version using the server's current version as the base so
+        // the server's optimistic lock accepts it (overwriting the conflicting edit).
+        await this.write(entityType, entityId, 'update', conflict.localVersion, conflict.serverEntityVersion);
       }
     } else if (resolution === 'server') {
-      // Accept server version — update local cache
+      // Accept server version — update local cache with correct server version number
       const conflict = await this.store.getConflict(entityType, entityId);
       if (conflict) {
         await this.store.putEntity({
           entityType,
           entityId,
-          version: 0, // will be updated on next sync
+          version: conflict.serverEntityVersion,
           data: conflict.serverVersion,
           updatedAt: new Date().toISOString(),
           lastAccessedAt: Date.now(),
         });
       }
     } else if (resolution === 'merged' && mergedData) {
-      // User-merged version — send as a new update
-      await this.write(entityType, entityId, 'update', mergedData, 0);
+      const conflict = await this.store.getConflict(entityType, entityId);
+      // User-merged version — send using the server's current version as the base
+      await this.write(entityType, entityId, 'update', mergedData, conflict?.serverEntityVersion ?? 0);
     }
 
     await this.store.resolveConflict(entityType, entityId, resolution);
@@ -289,13 +291,18 @@ export class SyncEngine {
 
     let cursor = await this.store.getSyncCursor();
     let hasMore = true;
+    // Safety cap: never fetch more than 20 pages in a single pull cycle.
+    // Prevents an infinite loop if the server misbehaves and always returns hasMore: true.
+    const MAX_PAGES = 20;
+    let pages = 0;
 
-    while (hasMore) {
+    while (hasMore && pages < MAX_PAGES) {
       const response = await this.apiClient.fetchUpdates(cursor ?? new Date(0).toISOString());
       await this.applyServerUpdates(response.updatedEntities);
       await this.store.setSyncCursor(response.nextSyncCursor);
       cursor = response.nextSyncCursor;
       hasMore = response.hasMore;
+      pages++;
     }
   }
 
@@ -388,12 +395,15 @@ export class SyncEngine {
               await this.store.updateOutboxEntry(entry);
               conflicts++;
 
-              // Store the conflict for user resolution
+              // Store the conflict for user resolution.
+              // serverEntityVersion is required so conflict resolution can use
+              // the correct baseVersion when re-sending the local change.
               const conflictRecord: ConflictRecord = {
                 entityType: entry.entityType,
                 entityId: entry.entityId,
                 localVersion: entry.payload,
                 serverVersion: result.serverData ?? {},
+                serverEntityVersion: result.newVersion ?? 0,
                 localTimestamp: entry.timestamp,
                 serverTimestamp: Date.now(),
               };
@@ -421,6 +431,8 @@ export class SyncEngine {
           }
 
           this.networkMonitor.reportFetchError();
+          // Reset state before scheduling retry so forceSync() can re-enter drainOutbox()
+          this.state = 'idle';
           this.scheduleRetry();
           return;
         }

@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"time"
 
 	"crm-services/services/sync/domain"
@@ -199,18 +200,22 @@ func (r *PostgresEntityRepository) DeleteEntity(ctx context.Context, tenantID, e
 }
 
 func (r *PostgresEntityRepository) FetchUpdatedSince(ctx context.Context, tenantID, userID string, cursor time.Time, limit int) ([]domain.Entity, error) {
-	// Query across all syncable entity types.
-	// In production this would be a UNION across tables or a materialized sync view.
-	// Simplified here to query contacts as an example — extend to other types.
-	entities := make([]domain.Entity, 0)
-
-	for entityType, table := range map[string]string{
+	// Query each syncable entity type and merge the results.
+	// The per-table queries use limit as a reasonable upper bound per table;
+	// after merging we sort globally and apply the caller's limit exactly,
+	// ensuring the cursor returned by the caller always reflects the true
+	// latest updated_at across all entity types.
+	entityTables := map[string]string{
 		"contact":  "contacts",
 		"deal":     "deals",
 		"activity": "activities",
 		"lead":     "leads",
 		"account":  "accounts",
-	} {
+	}
+
+	entities := make([]domain.Entity, 0)
+
+	for entityType, table := range entityTables {
 		query := fmt.Sprintf(
 			`SELECT id, version, data, updated_at FROM %s
 			 WHERE tenant_id = $1 AND updated_at > $2
@@ -254,6 +259,17 @@ func (r *PostgresEntityRepository) FetchUpdatedSince(ctx context.Context, tenant
 		if err := rows.Err(); err != nil {
 			return nil, fmt.Errorf("iterate rows from %s: %w", table, err)
 		}
+	}
+
+	// Sort globally by updated_at ASC so the cursor (last entry's UpdatedAt) is correct
+	// and the caller's limit slices a consistent window across all entity types.
+	sort.Slice(entities, func(i, j int) bool {
+		return entities[i].UpdatedAt.Before(entities[j].UpdatedAt)
+	})
+
+	// Apply the global limit after sorting
+	if len(entities) > limit {
+		entities = entities[:limit]
 	}
 
 	return entities, nil
