@@ -21,6 +21,7 @@ on-call responder should open to understand how the system stays up.
 | 08 | [self-healing-loops.md](08-self-healing-loops.md) | Curious how the system auto-recovers |
 | 09 | [incident-response.md](09-incident-response.md) | Running or joining an incident |
 | 10 | [security-compliance.md](10-security-compliance.md) | Working on auth, data protection, audits |
+| 11 | [data-backup-recovery.md](11-data-backup-recovery.md) | Setting up backups, cloud sync, or restoring data |
 
 ## Audience-based entry points
 
@@ -28,6 +29,7 @@ on-call responder should open to understand how the system stays up.
 - **SRE / on-call**: 05 → 07 → 08 → 09 → 06
 - **Security / compliance**: 10 → 04 → 03
 - **Engineering leadership**: 01 → 05 → 09
+- **Backup & recovery**: 11 → 04 → 07
 
 ## System at a glance
 
@@ -64,4 +66,5 @@ on-call responder should open to understand how the system stays up.
 1. If the system is on fire, open [07-disaster-recovery-runbook.md](07-disaster-recovery-runbook.md).
 2. If an alert fired but you have time to think, open [06-observability.md](06-observability.md) and [09-incident-response.md](09-incident-response.md).
 3. If you are building something new, start with [01-architecture-overview.md](01-architecture-overview.md) and [05-high-availability.md](05-high-availability.md).
-4. If you are wondering "how does it recover itself?", read [08-self-healing-loops.md](08-self-healing-loops.md).
+4. If you need to back up or restore data, open [11-data-backup-recovery.md](11-data-backup-recovery.md) and the `backup-scripts/` directory.
+5. If you are wondering "how does it recover itself?", read [08-self-healing-loops.md](08-self-healing-loops.md).
