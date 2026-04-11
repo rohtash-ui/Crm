@@ -43,6 +43,43 @@ func (r *AssignmentLogRepo) Create(ctx context.Context, logEntry *domain.LeadAss
 	return nil
 }
 
+func (r *AssignmentLogRepo) ListByAssignee(ctx context.Context, tenantID, userID string, limit int) ([]*domain.LeadAssignmentLog, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	query := `
+		SELECT id, tenant_id, lead_id, assigned_from, assigned_to, assigned_by,
+		       method, rule_id, reason, created_at
+		FROM lead_assignment_log
+		WHERE tenant_id = $1 AND assigned_to = $2
+		ORDER BY created_at DESC
+		LIMIT $3`
+
+	rows, err := r.db.QueryContext(ctx, query, tenantID, userID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("query assignee log: %w", err)
+	}
+	defer rows.Close()
+
+	var logs []*domain.LeadAssignmentLog
+	for rows.Next() {
+		entry := &domain.LeadAssignmentLog{}
+		var assignedFrom, ruleID, reason sql.NullString
+		if err := rows.Scan(
+			&entry.ID, &entry.TenantID, &entry.LeadID,
+			&assignedFrom, &entry.AssignedTo, &entry.AssignedBy,
+			&entry.Method, &ruleID, &reason, &entry.CreatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan log: %w", err)
+		}
+		entry.AssignedFrom = assignedFrom.String
+		entry.RuleID = ruleID.String
+		entry.Reason = reason.String
+		logs = append(logs, entry)
+	}
+	return logs, rows.Err()
+}
+
 func (r *AssignmentLogRepo) ListByLead(ctx context.Context, tenantID, leadID string) ([]*domain.LeadAssignmentLog, error) {
 	query := `
 		SELECT id, tenant_id, lead_id, assigned_from, assigned_to, assigned_by,

@@ -208,6 +208,152 @@ func (r *LeadRepo) Create(ctx context.Context, lead *domain.Lead) error {
 	return nil
 }
 
+// List returns a filtered, paginated set of leads for the manager view.
+func (r *LeadRepo) List(ctx context.Context, tenantID string, filter domain.LeadFilter) (*domain.LeadPage, error) {
+	if filter.Page < 1 {
+		filter.Page = 1
+	}
+	if filter.PageSize < 1 {
+		filter.PageSize = 50
+	}
+
+	args := []any{tenantID}
+	argIdx := 2
+	where := "WHERE tenant_id = $1"
+
+	if len(filter.Status) > 0 {
+		placeholders := make([]string, len(filter.Status))
+		for i, s := range filter.Status {
+			placeholders[i] = fmt.Sprintf("$%d", argIdx)
+			args = append(args, string(s))
+			argIdx++
+		}
+		where += fmt.Sprintf(" AND status IN (%s)", joinStrings(placeholders, ","))
+	}
+
+	if filter.AssignedTo == "unassigned" {
+		where += " AND assigned_to IS NULL"
+	} else if filter.AssignedTo != "" {
+		where += fmt.Sprintf(" AND assigned_to = $%d", argIdx)
+		args = append(args, filter.AssignedTo)
+		argIdx++
+	}
+
+	if filter.ProjectID != "" {
+		where += fmt.Sprintf(" AND project_id = $%d", argIdx)
+		args = append(args, filter.ProjectID)
+		argIdx++
+	}
+	if filter.LocationID != "" {
+		where += fmt.Sprintf(" AND location_id = $%d", argIdx)
+		args = append(args, filter.LocationID)
+		argIdx++
+	}
+	if filter.RegionID != "" {
+		where += fmt.Sprintf(" AND region_id = $%d", argIdx)
+		args = append(args, filter.RegionID)
+		argIdx++
+	}
+
+	if filter.Search != "" {
+		where += fmt.Sprintf(` AND (
+			first_name ILIKE $%d OR last_name ILIKE $%d OR
+			email ILIKE $%d OR phone ILIKE $%d OR company ILIKE $%d
+		)`, argIdx, argIdx, argIdx, argIdx, argIdx)
+		args = append(args, "%"+filter.Search+"%")
+		argIdx++
+	}
+
+	// Count total
+	var total int
+	countQuery := "SELECT COUNT(*) FROM leads " + where
+	if err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, fmt.Errorf("count leads: %w", err)
+	}
+
+	// Paginate
+	offset := (filter.Page - 1) * filter.PageSize
+	listQuery := fmt.Sprintf(`
+		SELECT id, tenant_id, first_name, last_name, email, phone, company,
+		       source, status, score, assigned_to, assigned_by, assigned_at,
+		       assignment_method, region_id, project_id, location_id,
+		       external_id, external_source, notes, created_at, updated_at
+		FROM leads %s
+		ORDER BY created_at DESC
+		LIMIT $%d OFFSET $%d`, where, argIdx, argIdx+1)
+
+	args = append(args, filter.PageSize, offset)
+
+	rows, err := r.db.QueryContext(ctx, listQuery, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list leads: %w", err)
+	}
+	defer rows.Close()
+
+	var leads []*domain.Lead
+	for rows.Next() {
+		lead := &domain.Lead{}
+		var (
+			firstName, lastName, email, phone, company    sql.NullString
+			assignedTo, assignedBy, assignmentMethod      sql.NullString
+			regionID, projectID, locationID               sql.NullString
+			externalID, externalSource, notes             sql.NullString
+			assignedAt                                    sql.NullTime
+		)
+		if err := rows.Scan(
+			&lead.ID, &lead.TenantID, &firstName, &lastName, &email, &phone, &company,
+			&lead.Source, &lead.Status, &lead.Score,
+			&assignedTo, &assignedBy, &assignedAt, &assignmentMethod,
+			&regionID, &projectID, &locationID,
+			&externalID, &externalSource, &notes,
+			&lead.CreatedAt, &lead.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan lead: %w", err)
+		}
+		lead.FirstName = firstName.String
+		lead.LastName = lastName.String
+		lead.Email = email.String
+		lead.Phone = phone.String
+		lead.Company = company.String
+		lead.AssignedTo = assignedTo.String
+		lead.AssignedBy = assignedBy.String
+		lead.AssignmentMethod = domain.AssignmentMethod(assignmentMethod.String)
+		lead.RegionID = regionID.String
+		lead.ProjectID = projectID.String
+		lead.LocationID = locationID.String
+		lead.ExternalID = externalID.String
+		lead.ExternalSource = externalSource.String
+		lead.Notes = notes.String
+		if assignedAt.Valid {
+			lead.AssignedAt = &assignedAt.Time
+		}
+		leads = append(leads, lead)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	totalPages := (total + filter.PageSize - 1) / filter.PageSize
+	return &domain.LeadPage{
+		Leads:      leads,
+		Total:      total,
+		Page:       filter.Page,
+		PageSize:   filter.PageSize,
+		TotalPages: totalPages,
+	}, nil
+}
+
+func joinStrings(ss []string, sep string) string {
+	result := ""
+	for i, s := range ss {
+		if i > 0 {
+			result += sep
+		}
+		result += s
+	}
+	return result
+}
+
 func nullString(s string) sql.NullString {
 	if s == "" {
 		return sql.NullString{}

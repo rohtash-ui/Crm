@@ -5,12 +5,26 @@ import (
 )
 
 // RegisterRoutes wires up the lead assignment API endpoints.
-func RegisterRoutes(mux *http.ServeMux, h *Handler, admin *AdminHandler) {
-	// --- Lead Assignment ---
+func RegisterRoutes(mux *http.ServeMux, h *Handler, admin *AdminHandler, manage *ManualAssignHandler) {
+	// --- Automated Assignment ---
 	mux.HandleFunc("POST /api/v1/leads/assign/round-robin", h.HandleRoundRobinAssign)
 	mux.HandleFunc("POST /api/v1/leads/assign/round-robin/bulk", h.HandleBulkRoundRobinAssign)
 	mux.HandleFunc("POST /api/v1/leads/assign/manual", h.HandleManualAssign)
 	mux.HandleFunc("POST /api/v1/leads/assign/region", h.HandleBulkRegionAssign)
+
+	// --- Manager/Team Lead: Browse Leads ---
+	mux.HandleFunc("GET /api/v1/manage/leads", manage.HandleListLeads)
+	mux.HandleFunc("GET /api/v1/manage/leads/{lead_id}", manage.HandleGetLead)
+
+	// --- Manager/Team Lead: Browse Team Members ---
+	mux.HandleFunc("GET /api/v1/manage/teams/{team_id}/workloads", manage.HandleListMemberWorkloads)
+	mux.HandleFunc("GET /api/v1/manage/members/{user_id}/leads", manage.HandleGetMemberLeads)
+
+	// --- Manager/Team Lead: Assign / Reassign / Unassign ---
+	mux.HandleFunc("POST /api/v1/manage/leads/assign", manage.HandleAssignLead)
+	mux.HandleFunc("POST /api/v1/manage/leads/reassign", manage.HandleReassignLead)
+	mux.HandleFunc("POST /api/v1/manage/leads/bulk-assign", manage.HandleBulkAssignLeads)
+	mux.HandleFunc("POST /api/v1/manage/leads/unassign", manage.HandleUnassignLead)
 
 	// --- Admin: Availability / Leave Management ---
 	mux.HandleFunc("POST /api/v1/admin/availability/leave", admin.HandleMarkLeave)

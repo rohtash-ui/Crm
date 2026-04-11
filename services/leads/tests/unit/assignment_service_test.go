@@ -62,6 +62,34 @@ func (m *mockLeadRepo) Create(_ context.Context, lead *domain.Lead) error {
 	return nil
 }
 
+func (m *mockLeadRepo) List(_ context.Context, tenantID string, filter domain.LeadFilter) (*domain.LeadPage, error) {
+	var leads []*domain.Lead
+	for _, lead := range m.leads {
+		if lead.TenantID != tenantID {
+			continue
+		}
+		if len(filter.Status) > 0 {
+			match := false
+			for _, s := range filter.Status {
+				if lead.Status == s {
+					match = true
+					break
+				}
+			}
+			if !match {
+				continue
+			}
+		}
+		if filter.AssignedTo == "unassigned" && lead.AssignedTo != "" {
+			continue
+		} else if filter.AssignedTo != "" && filter.AssignedTo != "unassigned" && lead.AssignedTo != filter.AssignedTo {
+			continue
+		}
+		leads = append(leads, lead)
+	}
+	return &domain.LeadPage{Leads: leads, Total: len(leads), Page: 1, PageSize: len(leads), TotalPages: 1}, nil
+}
+
 type mockRuleRepo struct {
 	rules []*domain.LeadAssignmentRule
 }
@@ -178,6 +206,20 @@ func (m *mockTeamRepo) DecrementLeadCount(_ context.Context, tenantID, memberID 
 	return nil
 }
 
+func (m *mockTeamRepo) ListTeams(_ context.Context, tenantID string) ([]*domain.Team, error) {
+	return []*domain.Team{{ID: testTeamID, TenantID: tenantID, Name: "Test Team"}}, nil
+}
+
+func (m *mockTeamRepo) ListMembersByUserID(_ context.Context, tenantID, userID string) ([]*domain.TeamMember, error) {
+	var result []*domain.TeamMember
+	for _, member := range m.members {
+		if member.TenantID == tenantID && member.UserID == userID {
+			result = append(result, member)
+		}
+	}
+	return result, nil
+}
+
 type mockRRStateRepo struct {
 	states map[string]*domain.RoundRobinState
 }
@@ -225,6 +267,19 @@ func (m *mockLogRepo) ListByLead(_ context.Context, tenantID, leadID string) ([]
 	for _, l := range m.logs {
 		if l.TenantID == tenantID && l.LeadID == leadID {
 			result = append(result, l)
+		}
+	}
+	return result, nil
+}
+
+func (m *mockLogRepo) ListByAssignee(_ context.Context, tenantID, userID string, limit int) ([]*domain.LeadAssignmentLog, error) {
+	var result []*domain.LeadAssignmentLog
+	for _, l := range m.logs {
+		if l.TenantID == tenantID && l.AssignedTo == userID {
+			result = append(result, l)
+			if limit > 0 && len(result) >= limit {
+				break
+			}
 		}
 	}
 	return result, nil

@@ -56,11 +56,18 @@ func main() {
 		leadRepo, logRepo,
 	)
 
+	manualSvc := domain.NewManualAssignmentService(
+		leadRepo, teamRepo, logRepo,
+		availabilityRepo, dailyCounterRepo,
+		assignmentSvc,
+	)
+
 	// HTTP server
 	handler := api.NewHandler(assignmentSvc)
 	adminHandler := api.NewAdminHandler(adminSvc)
+	manageHandler := api.NewManualAssignHandler(manualSvc)
 	mux := http.NewServeMux()
-	api.RegisterRoutes(mux, handler, adminHandler)
+	api.RegisterRoutes(mux, handler, adminHandler, manageHandler)
 
 	port := envOrDefault("PORT", "8080")
 	log.Printf("Lead Assignment Service starting on :%s", port)

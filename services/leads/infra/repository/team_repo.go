@@ -115,3 +115,65 @@ func (r *TeamRepo) DecrementLeadCount(ctx context.Context, tenantID, memberID st
 	_, err := r.db.ExecContext(ctx, query, tenantID, memberID)
 	return err
 }
+
+func (r *TeamRepo) ListTeams(ctx context.Context, tenantID string) ([]*domain.Team, error) {
+	query := `
+		SELECT id, tenant_id, name, region_id, project_id, location_id,
+		       is_active, created_at, updated_at
+		FROM teams
+		WHERE tenant_id = $1 AND is_active = TRUE
+		ORDER BY name ASC`
+
+	rows, err := r.db.QueryContext(ctx, query, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("list teams: %w", err)
+	}
+	defer rows.Close()
+
+	var teams []*domain.Team
+	for rows.Next() {
+		team := &domain.Team{}
+		var regionID, projectID, locationID sql.NullString
+		if err := rows.Scan(
+			&team.ID, &team.TenantID, &team.Name,
+			&regionID, &projectID, &locationID,
+			&team.IsActive, &team.CreatedAt, &team.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan team: %w", err)
+		}
+		team.RegionID = regionID.String
+		team.ProjectID = projectID.String
+		team.LocationID = locationID.String
+		teams = append(teams, team)
+	}
+	return teams, rows.Err()
+}
+
+// ListMembersByUserID returns all team memberships for a given user.
+func (r *TeamRepo) ListMembersByUserID(ctx context.Context, tenantID, userID string) ([]*domain.TeamMember, error) {
+	query := `
+		SELECT id, tenant_id, team_id, user_id, user_email, user_name,
+		       role, is_active, max_leads, current_lead_count, created_at, updated_at
+		FROM team_members
+		WHERE tenant_id = $1 AND user_id = $2`
+
+	rows, err := r.db.QueryContext(ctx, query, tenantID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list memberships: %w", err)
+	}
+	defer rows.Close()
+
+	var members []*domain.TeamMember
+	for rows.Next() {
+		m := &domain.TeamMember{}
+		if err := rows.Scan(
+			&m.ID, &m.TenantID, &m.TeamID, &m.UserID, &m.UserEmail, &m.UserName,
+			&m.Role, &m.IsActive, &m.MaxLeads, &m.CurrentLeadCount,
+			&m.CreatedAt, &m.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan member: %w", err)
+		}
+		members = append(members, m)
+	}
+	return members, rows.Err()
+}

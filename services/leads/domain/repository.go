@@ -6,8 +6,30 @@ import "context"
 type LeadRepository interface {
 	GetByID(ctx context.Context, tenantID, leadID string) (*Lead, error)
 	ListUnassigned(ctx context.Context, tenantID string, filter UnassignedFilter) ([]*Lead, error)
+	List(ctx context.Context, tenantID string, filter LeadFilter) (*LeadPage, error)
 	UpdateAssignment(ctx context.Context, lead *Lead) error
 	Create(ctx context.Context, lead *Lead) error
+}
+
+// LeadFilter supports rich filtering for the manager's lead-browsing view.
+type LeadFilter struct {
+	Status     []LeadStatus // filter by one or more statuses
+	AssignedTo string       // filter by assignee user_id ("" = all, "unassigned" = no assignee)
+	ProjectID  string
+	LocationID string
+	RegionID   string
+	Search     string // full-text: name, email, phone, company
+	Page       int    // 1-based
+	PageSize   int    // default 50
+}
+
+// LeadPage is a paginated result of leads.
+type LeadPage struct {
+	Leads      []*Lead `json:"leads"`
+	Total      int     `json:"total"`
+	Page       int     `json:"page"`
+	PageSize   int     `json:"page_size"`
+	TotalPages int     `json:"total_pages"`
 }
 
 // AssignmentRuleRepository defines access to round-robin rules.
@@ -26,6 +48,8 @@ type TeamRepository interface {
 	GetMemberByUserID(ctx context.Context, tenantID, teamID, userID string) (*TeamMember, error)
 	IncrementLeadCount(ctx context.Context, tenantID, memberID string) error
 	DecrementLeadCount(ctx context.Context, tenantID, memberID string) error
+	ListTeams(ctx context.Context, tenantID string) ([]*Team, error)
+	ListMembersByUserID(ctx context.Context, tenantID, userID string) ([]*TeamMember, error)
 }
 
 // RoundRobinStateRepository tracks rotation position.
@@ -38,6 +62,7 @@ type RoundRobinStateRepository interface {
 type AssignmentLogRepository interface {
 	Create(ctx context.Context, log *LeadAssignmentLog) error
 	ListByLead(ctx context.Context, tenantID, leadID string) ([]*LeadAssignmentLog, error)
+	ListByAssignee(ctx context.Context, tenantID, userID string, limit int) ([]*LeadAssignmentLog, error)
 }
 
 // RegionRepository defines access to regions.
