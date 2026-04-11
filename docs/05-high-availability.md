@@ -115,9 +115,11 @@ feature has a defined degraded mode:
 | Recommendations (AI) | Hidden; no blocking |
 | Integrations | In-app works; external sync shows "reconnect" |
 | Write path on a shard | Read-only banner for affected tenants |
+| Client network | Offline mode: reads from cache, writes to outbox, sync on reconnect — see [11](11-offline-sync.md) |
 
 Degraded modes are toggled by feature flags and by mesh health signals — no
-code deploy needed. See also the self-healing loops in [08](08-self-healing-loops.md).
+code deploy needed. See also the self-healing loops in [08](08-self-healing-loops.md)
+and offline sync in [11](11-offline-sync.md).
 
 ## Load shedding
 

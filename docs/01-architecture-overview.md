@@ -139,3 +139,4 @@ Capacity planning reviews run quarterly; every service declares its headroom
 - **How we see inside** → [06](06-observability.md)
 - **What to do when it breaks** → [07](07-disaster-recovery-runbook.md)
 - **How it heals itself** → [08](08-self-healing-loops.md)
+- **How it works offline** → [11](11-offline-sync.md)

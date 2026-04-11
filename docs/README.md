@@ -21,6 +21,7 @@ on-call responder should open to understand how the system stays up.
 | 08 | [self-healing-loops.md](08-self-healing-loops.md) | Curious how the system auto-recovers |
 | 09 | [incident-response.md](09-incident-response.md) | Running or joining an incident |
 | 10 | [security-compliance.md](10-security-compliance.md) | Working on auth, data protection, audits |
+| 11 | [offline-sync.md](11-offline-sync.md) | Building or debugging offline-first features |
 
 ## Audience-based entry points
 
@@ -28,6 +29,7 @@ on-call responder should open to understand how the system stays up.
 - **SRE / on-call**: 05 → 07 → 08 → 09 → 06
 - **Security / compliance**: 10 → 04 → 03
 - **Engineering leadership**: 01 → 05 → 09
+- **Mobile / offline**: 11 → 04 → 05 → 10
 
 ## System at a glance
 
