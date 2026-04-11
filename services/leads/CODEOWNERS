@@ -1,0 +1,3 @@
+# Lead Assignment Service
+/services/leads/ @crm/leads-team
+/services/leads/helm/ @crm/platform-sre
