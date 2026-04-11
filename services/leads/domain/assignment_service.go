@@ -8,13 +8,18 @@ import (
 )
 
 // AssignmentService orchestrates both round-robin and manual lead assignment.
+// It integrates with availability, daily config, and daily counters to ensure
+// people on leave or over their daily cap are never assigned leads.
 type AssignmentService struct {
-	leads      LeadRepository
-	rules      AssignmentRuleRepository
-	teams      TeamRepository
-	rrState    RoundRobinStateRepository
-	log        AssignmentLogRepository
-	events     EventPublisher
+	leads        LeadRepository
+	rules        AssignmentRuleRepository
+	teams        TeamRepository
+	rrState      RoundRobinStateRepository
+	log          AssignmentLogRepository
+	events       EventPublisher
+	availability AvailabilityRepository
+	dailyConfig  DailyConfigRepository
+	dailyCounter DailyCounterRepository
 }
 
 // NewAssignmentService creates a new assignment service with all required dependencies.
@@ -25,14 +30,20 @@ func NewAssignmentService(
 	rrState RoundRobinStateRepository,
 	log AssignmentLogRepository,
 	events EventPublisher,
+	availability AvailabilityRepository,
+	dailyConfig DailyConfigRepository,
+	dailyCounter DailyCounterRepository,
 ) *AssignmentService {
 	return &AssignmentService{
-		leads:  leads,
-		rules:  rules,
-		teams:  teams,
-		rrState: rrState,
-		log:    log,
-		events: events,
+		leads:        leads,
+		rules:        rules,
+		teams:        teams,
+		rrState:      rrState,
+		log:          log,
+		events:       events,
+		availability: availability,
+		dailyConfig:  dailyConfig,
+		dailyCounter: dailyCounter,
 	}
 }
 
@@ -49,10 +60,14 @@ type RoundRobinAssignRequest struct {
 
 // AssignRoundRobin finds the matching rule for the lead's project/location/region,
 // picks the next eligible team member in rotation, and assigns the lead.
+// It checks: (1) daily config automation toggle, (2) member availability/leave,
+// (3) daily capacity caps, (4) overall capacity before assigning.
 func (s *AssignmentService) AssignRoundRobin(ctx context.Context, req RoundRobinAssignRequest) (*Lead, error) {
 	if req.TenantID == "" {
 		return nil, ErrInvalidTenant
 	}
+
+	today := time.Now().UTC().Format("2006-01-02")
 
 	// 1. Fetch the lead
 	lead, err := s.leads.GetByID(ctx, req.TenantID, req.LeadID)
@@ -74,19 +89,28 @@ func (s *AssignmentService) AssignRoundRobin(ctx context.Context, req RoundRobin
 		return nil, ErrNoMatchingRule
 	}
 
-	// 3. Get active team members for this rule's team
+	// 3. Check daily config: is automation paused for today?
+	dailyCfg, _ := s.dailyConfig.GetByDate(ctx, req.TenantID, today, rule.ID)
+	if dailyCfg != nil && !dailyCfg.IsAutomationActive {
+		return nil, ErrAutomationPaused
+	}
+
+	// 4. Get active team members for this rule's team
 	members, err := s.teams.ListActiveMembers(ctx, req.TenantID, rule.TeamID)
 	if err != nil {
 		return nil, fmt.Errorf("list members: %w", err)
 	}
 
-	// 4. Filter to eligible members (active, within capacity)
-	eligible := filterEligible(members, rule.RespectCapacity)
+	// 5. Filter to eligible members (active, available, within capacity)
+	eligible, err := s.filterEligibleWithAvailability(ctx, req.TenantID, members, rule.RespectCapacity, today, dailyCfg)
+	if err != nil {
+		return nil, fmt.Errorf("filter eligible: %w", err)
+	}
 	if len(eligible) == 0 {
 		return nil, ErrNoEligibleMembers
 	}
 
-	// 5. Get round-robin state and pick next member
+	// 6. Get round-robin state and pick next member
 	state, err := s.rrState.GetOrCreate(ctx, req.TenantID, rule.ID)
 	if err != nil {
 		return nil, fmt.Errorf("get rr state: %w", err)
@@ -94,7 +118,7 @@ func (s *AssignmentService) AssignRoundRobin(ctx context.Context, req RoundRobin
 
 	nextMember := pickNextMember(eligible, state.LastAssignedMemberID)
 
-	// 6. Assign the lead
+	// 7. Assign the lead
 	now := time.Now().UTC()
 	previousAssignee := lead.AssignedTo
 
@@ -109,7 +133,7 @@ func (s *AssignmentService) AssignRoundRobin(ctx context.Context, req RoundRobin
 		return nil, fmt.Errorf("update lead assignment: %w", err)
 	}
 
-	// 7. Update round-robin state
+	// 8. Update round-robin state
 	state.LastAssignedMemberID = nextMember.ID
 	state.LastAssignedAt = &now
 	state.RotationCount++
@@ -118,12 +142,15 @@ func (s *AssignmentService) AssignRoundRobin(ctx context.Context, req RoundRobin
 		return nil, fmt.Errorf("update rr state: %w", err)
 	}
 
-	// 8. Increment lead count for the member
+	// 9. Increment lead counts (overall + daily)
 	if err := s.teams.IncrementLeadCount(ctx, req.TenantID, nextMember.ID); err != nil {
 		return nil, fmt.Errorf("increment lead count: %w", err)
 	}
+	if err := s.dailyCounter.Increment(ctx, req.TenantID, nextMember.ID, today); err != nil {
+		return nil, fmt.Errorf("increment daily counter: %w", err)
+	}
 
-	// 9. Log the assignment
+	// 10. Log the assignment
 	logEntry := &LeadAssignmentLog{
 		TenantID:     req.TenantID,
 		LeadID:       lead.ID,
@@ -139,7 +166,7 @@ func (s *AssignmentService) AssignRoundRobin(ctx context.Context, req RoundRobin
 		return nil, fmt.Errorf("create assignment log: %w", err)
 	}
 
-	// 10. Publish event
+	// 11. Publish event
 	eventType := EventLeadAssigned
 	if previousAssignee != "" {
 		eventType = EventLeadReassigned
@@ -199,12 +226,12 @@ func (s *AssignmentService) BulkRoundRobinAssign(ctx context.Context, tenantID s
 
 // ManualAssignRequest specifies a manual lead assignment by an authorized user.
 type ManualAssignRequest struct {
-	TenantID    string
-	LeadID      string
-	AssignToID  string   // user_id to assign the lead to
-	AssignByID  string   // user_id of the person making the assignment
+	TenantID     string
+	LeadID       string
+	AssignToID   string   // user_id to assign the lead to
+	AssignByID   string   // user_id of the person making the assignment
 	AssignByRole UserRole // role of the person making the assignment
-	Reason      string
+	Reason       string
 }
 
 // AssignManually allows team leads and managers to manually assign a lead.
@@ -340,24 +367,81 @@ func (s *AssignmentService) BulkAssignToRegion(ctx context.Context, req BulkManu
 
 // --- Helpers ---
 
-// filterEligible returns only active members with available capacity.
-func filterEligible(members []*TeamMember, respectCapacity bool) []*TeamMember {
+// filterEligibleWithAvailability filters members based on:
+// 1. Active status
+// 2. Overall capacity (max_leads)
+// 3. Availability/leave status for today
+// 4. Daily config roster (if set)
+// 5. Daily lead counter (daily cap)
+func (s *AssignmentService) filterEligibleWithAvailability(
+	ctx context.Context,
+	tenantID string,
+	members []*TeamMember,
+	respectCapacity bool,
+	today string,
+	dailyCfg *DailyAssignmentConfig,
+) ([]*TeamMember, error) {
 	// Sort by ID for deterministic ordering
 	sort.Slice(members, func(i, j int) bool {
 		return members[i].ID < members[j].ID
 	})
+
+	// Build roster lookup if daily config exists
+	rosterLookup := make(map[string]*RosterEntry)
+	if dailyCfg != nil && len(dailyCfg.Roster) > 0 {
+		for i := range dailyCfg.Roster {
+			entry := &dailyCfg.Roster[i]
+			rosterLookup[entry.MemberID] = entry
+		}
+	}
+
+	// Get all unavailable members for today in one query
+	unavailable, err := s.availability.ListUnavailableOnDate(ctx, tenantID, today)
+	if err != nil {
+		return nil, fmt.Errorf("list unavailable: %w", err)
+	}
+	unavailableSet := make(map[string]bool)
+	for _, entry := range unavailable {
+		unavailableSet[entry.MemberID] = true
+	}
 
 	var eligible []*TeamMember
 	for _, m := range members {
 		if !m.IsActive {
 			continue
 		}
+
+		// Skip if on leave / unavailable / offline
+		if unavailableSet[m.ID] {
+			continue
+		}
+
+		// Skip if daily roster exists and member is not in it or disabled
+		if len(rosterLookup) > 0 {
+			roster, inRoster := rosterLookup[m.ID]
+			if !inRoster || !roster.IsActive {
+				continue
+			}
+		}
+
+		// Skip if at overall capacity
 		if respectCapacity && !m.HasCapacity() {
 			continue
 		}
+
+		// Skip if at daily capacity
+		dailyMax := m.MaxLeads // default
+		if roster, ok := rosterLookup[m.ID]; ok && roster.MaxLeadsToday > 0 {
+			dailyMax = roster.MaxLeadsToday
+		}
+		counter, _ := s.dailyCounter.GetOrCreate(ctx, tenantID, m.ID, m.UserID, today, dailyMax)
+		if counter != nil && !counter.HasDailyCapacity() {
+			continue
+		}
+
 		eligible = append(eligible, m)
 	}
-	return eligible
+	return eligible, nil
 }
 
 // pickNextMember selects the next team member after the last assigned one.

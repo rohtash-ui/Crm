@@ -53,3 +53,32 @@ type UnassignedFilter struct {
 	RegionID   string
 	Limit      int
 }
+
+// AvailabilityRepository manages member leave and availability.
+type AvailabilityRepository interface {
+	Create(ctx context.Context, entry *MemberAvailability) error
+	Update(ctx context.Context, entry *MemberAvailability) error
+	Delete(ctx context.Context, tenantID, entryID string) error
+	GetByID(ctx context.Context, tenantID, entryID string) (*MemberAvailability, error)
+	// ListByMember returns all availability entries for a member.
+	ListByMember(ctx context.Context, tenantID, memberID string) ([]*MemberAvailability, error)
+	// ListUnavailableOnDate returns all non-available entries that cover the given date.
+	ListUnavailableOnDate(ctx context.Context, tenantID, date string) ([]*MemberAvailability, error)
+	// IsAvailable checks if a specific member is available on a given date.
+	IsAvailable(ctx context.Context, tenantID, memberID, date string) (bool, error)
+}
+
+// DailyConfigRepository manages the daily assignment configuration / roster.
+type DailyConfigRepository interface {
+	GetByDate(ctx context.Context, tenantID, date string, ruleID string) (*DailyAssignmentConfig, error)
+	Upsert(ctx context.Context, config *DailyAssignmentConfig) error
+	Delete(ctx context.Context, tenantID, configID string) error
+	ListByDateRange(ctx context.Context, tenantID, startDate, endDate string) ([]*DailyAssignmentConfig, error)
+}
+
+// DailyCounterRepository tracks per-member per-day lead counts.
+type DailyCounterRepository interface {
+	GetOrCreate(ctx context.Context, tenantID, memberID, userID, date string, maxLeads int) (*DailyLeadCounter, error)
+	Increment(ctx context.Context, tenantID, memberID, date string) error
+	GetByDate(ctx context.Context, tenantID, date string) ([]*DailyLeadCounter, error)
+}

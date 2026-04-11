@@ -33,6 +33,9 @@ func main() {
 	teamRepo := repository.NewTeamRepo(db)
 	rrStateRepo := repository.NewRoundRobinStateRepo(db)
 	logRepo := repository.NewAssignmentLogRepo(db)
+	availabilityRepo := repository.NewAvailabilityRepo(db)
+	dailyConfigRepo := repository.NewDailyConfigRepo(db)
+	dailyCounterRepo := repository.NewDailyCounterRepo(db)
 
 	// Event publisher
 	kafkaBrokers := envOrDefault("KAFKA_BROKERS", "localhost:9092")
@@ -41,13 +44,23 @@ func main() {
 		"crm.lead",
 	)
 
-	// Domain service
-	svc := domain.NewAssignmentService(leadRepo, ruleRepo, teamRepo, rrStateRepo, logRepo, publisher)
+	// Domain services
+	assignmentSvc := domain.NewAssignmentService(
+		leadRepo, ruleRepo, teamRepo, rrStateRepo, logRepo, publisher,
+		availabilityRepo, dailyConfigRepo, dailyCounterRepo,
+	)
+
+	adminSvc := domain.NewAdminService(
+		teamRepo, ruleRepo, rrStateRepo,
+		availabilityRepo, dailyConfigRepo, dailyCounterRepo,
+		leadRepo, logRepo,
+	)
 
 	// HTTP server
-	handler := api.NewHandler(svc)
+	handler := api.NewHandler(assignmentSvc)
+	adminHandler := api.NewAdminHandler(adminSvc)
 	mux := http.NewServeMux()
-	api.RegisterRoutes(mux, handler)
+	api.RegisterRoutes(mux, handler, adminHandler)
 
 	port := envOrDefault("PORT", "8080")
 	log.Printf("Lead Assignment Service starting on :%s", port)

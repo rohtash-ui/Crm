@@ -201,3 +201,107 @@ type LeadAssignmentLog struct {
 	Reason       string           `json:"reason,omitempty"`
 	CreatedAt    time.Time        `json:"created_at"`
 }
+
+// --- Availability & Daily Config ---
+
+type AvailabilityStatus string
+
+const (
+	StatusAvailable   AvailabilityStatus = "available"
+	StatusOnLeave     AvailabilityStatus = "on_leave"
+	StatusUnavailable AvailabilityStatus = "unavailable"
+	StatusOffline     AvailabilityStatus = "offline"
+)
+
+type LeaveType string
+
+const (
+	LeaveVacation      LeaveType = "vacation"
+	LeaveSick          LeaveType = "sick"
+	LeavePersonal      LeaveType = "personal"
+	LeaveTraining      LeaveType = "training"
+	LeavePublicHoliday LeaveType = "public_holiday"
+	LeaveHalfDay       LeaveType = "half_day"
+	LeaveOther         LeaveType = "other"
+)
+
+// MemberAvailability tracks when a member is on leave or unavailable.
+type MemberAvailability struct {
+	ID        string             `json:"id"`
+	TenantID  string             `json:"tenant_id"`
+	MemberID  string             `json:"member_id"`
+	UserID    string             `json:"user_id"`
+	Status    AvailabilityStatus `json:"status"`
+	LeaveType LeaveType          `json:"leave_type,omitempty"`
+	StartDate string             `json:"start_date"` // YYYY-MM-DD
+	EndDate   string             `json:"end_date"`   // YYYY-MM-DD
+	Reason    string             `json:"reason,omitempty"`
+	MarkedBy  string             `json:"marked_by"`
+	CreatedAt time.Time          `json:"created_at"`
+	UpdatedAt time.Time          `json:"updated_at"`
+}
+
+// RosterEntry defines one member's participation in a daily config roster.
+type RosterEntry struct {
+	MemberID     string  `json:"member_id"`
+	UserID       string  `json:"user_id"`
+	UserName     string  `json:"user_name"`
+	MaxLeadsToday int    `json:"max_leads_today"`
+	Weight       float64 `json:"weight"` // 1.0 = normal, 2.0 = double share, 0.5 = half
+	IsActive     bool    `json:"is_active"`
+}
+
+// DailyAssignmentConfig holds the controllable roster for a specific day.
+type DailyAssignmentConfig struct {
+	ID                 string        `json:"id"`
+	TenantID           string        `json:"tenant_id"`
+	ConfigDate         string        `json:"config_date"` // YYYY-MM-DD
+	RuleID             string        `json:"rule_id,omitempty"`
+	IsAutomationActive bool          `json:"is_automation_active"`
+	Roster             []RosterEntry `json:"roster"`
+	Notes              string        `json:"notes,omitempty"`
+	CreatedBy          string        `json:"created_by"`
+	UpdatedBy          string        `json:"updated_by"`
+	CreatedAt          time.Time     `json:"created_at"`
+	UpdatedAt          time.Time     `json:"updated_at"`
+}
+
+// DailyLeadCounter tracks per-member, per-day lead counts for daily caps.
+type DailyLeadCounter struct {
+	ID          string    `json:"id"`
+	TenantID    string    `json:"tenant_id"`
+	MemberID    string    `json:"member_id"`
+	UserID      string    `json:"user_id"`
+	CounterDate string    `json:"counter_date"` // YYYY-MM-DD
+	LeadCount   int       `json:"lead_count"`
+	MaxLeads    int       `json:"max_leads"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// HasDailyCapacity returns true if the counter hasn't reached its daily max.
+func (c *DailyLeadCounter) HasDailyCapacity() bool {
+	return c.LeadCount < c.MaxLeads
+}
+
+// MemberDailyStatus is a computed view combining member info + availability + daily config.
+type MemberDailyStatus struct {
+	Member       *TeamMember         `json:"member"`
+	Availability *MemberAvailability `json:"availability,omitempty"`
+	DailyCounter *DailyLeadCounter   `json:"daily_counter,omitempty"`
+	RosterEntry  *RosterEntry        `json:"roster_entry,omitempty"`
+	IsEligible   bool                `json:"is_eligible"`
+	Reason       string              `json:"reason,omitempty"` // why not eligible
+}
+
+// AssignmentStats provides a snapshot of current assignment state.
+type AssignmentStats struct {
+	TenantID           string              `json:"tenant_id"`
+	Date               string              `json:"date"`
+	TotalLeadsToday    int                 `json:"total_leads_today"`
+	AssignedToday      int                 `json:"assigned_today"`
+	UnassignedCount    int                 `json:"unassigned_count"`
+	AutomationActive   bool                `json:"automation_active"`
+	ActiveRules        int                 `json:"active_rules"`
+	MemberStatuses     []MemberDailyStatus `json:"member_statuses"`
+}
