@@ -1,0 +1,327 @@
+openapi: 3.1.0
+info:
+  title: Lead Assignment Service
+  description: |
+    Manages lead assignment via round-robin automation and manual assignment.
+    Supports scoping by project, location, and region.
+    Team leads and managers can manually assign leads to regions.
+  version: 1.0.0
+  contact:
+    name: CRM Platform Team
+
+servers:
+  - url: /api/v1
+
+security:
+  - bearerAuth: []
+
+paths:
+  /leads/assign/round-robin:
+    post:
+      summary: Assign a lead via round-robin
+      description: |
+        Automatically assigns a lead to the next eligible team member using
+        round-robin rotation. Matches the lead to an assignment rule based on
+        its project, location, or region scope.
+      operationId: assignRoundRobin
+      tags: [Lead Assignment]
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoundRobinAssignRequest'
+      responses:
+        '200':
+          description: Lead assigned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignmentResponse'
+        '404':
+          description: Lead or matching rule not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: No eligible members available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /leads/assign/round-robin/bulk:
+    post:
+      summary: Bulk round-robin assignment
+      description: |
+        Assigns all unassigned leads matching the given filters using round-robin.
+        Useful for processing batches of new leads from LeadSquare imports.
+      operationId: bulkAssignRoundRobin
+      tags: [Lead Assignment]
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkRoundRobinRequest'
+      responses:
+        '200':
+          description: Bulk assignment complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkAssignmentResponse'
+
+  /leads/assign/manual:
+    post:
+      summary: Manually assign a lead
+      description: |
+        Allows team leads and managers to manually assign a lead to a specific
+        sales representative. Requires admin, manager, or team_lead role.
+      operationId: assignManual
+      tags: [Lead Assignment]
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - $ref: '#/components/parameters/UserID'
+        - $ref: '#/components/parameters/UserRole'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManualAssignRequest'
+      responses:
+        '200':
+          description: Lead manually assigned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignmentResponse'
+        '403':
+          description: User does not have permission
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Lead not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /leads/assign/region:
+    post:
+      summary: Bulk assign leads to a region
+      description: |
+        Allows managers to assign multiple leads to a region. If assign_to_id
+        is specified, all leads go to that user. If omitted, leads are
+        distributed via round-robin across the region's team.
+      operationId: bulkAssignToRegion
+      tags: [Lead Assignment]
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - $ref: '#/components/parameters/UserID'
+        - $ref: '#/components/parameters/UserRole'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkRegionAssignRequest'
+      responses:
+        '200':
+          description: Leads assigned to region
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkAssignmentResponse'
+        '403':
+          description: User does not have permission
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    TenantID:
+      name: X-Tenant-ID
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+    UserID:
+      name: X-User-ID
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+    UserRole:
+      name: X-User-Role
+      in: header
+      required: true
+      schema:
+        type: string
+        enum: [admin, manager, team_lead, sales_rep]
+
+  schemas:
+    RoundRobinAssignRequest:
+      type: object
+      required: [lead_id]
+      properties:
+        lead_id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+          description: Override scope to a specific project
+        location_id:
+          type: string
+          format: uuid
+          description: Override scope to a specific location
+        region_id:
+          type: string
+          format: uuid
+          description: Override scope to a specific region
+
+    BulkRoundRobinRequest:
+      type: object
+      properties:
+        project_id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        region_id:
+          type: string
+          format: uuid
+        limit:
+          type: integer
+          default: 100
+          maximum: 1000
+
+    ManualAssignRequest:
+      type: object
+      required: [lead_id, assign_to_id]
+      properties:
+        lead_id:
+          type: string
+          format: uuid
+        assign_to_id:
+          type: string
+          format: uuid
+          description: User ID of the target sales rep
+        reason:
+          type: string
+          maxLength: 500
+
+    BulkRegionAssignRequest:
+      type: object
+      required: [lead_ids, region_id]
+      properties:
+        lead_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 500
+        region_id:
+          type: string
+          format: uuid
+        assign_to_id:
+          type: string
+          format: uuid
+          description: If set, all leads go to this user. If omitted, round-robin within region.
+        reason:
+          type: string
+          maxLength: 500
+
+    AssignmentResponse:
+      type: object
+      properties:
+        lead:
+          $ref: '#/components/schemas/Lead'
+        message:
+          type: string
+
+    BulkAssignmentResponse:
+      type: object
+      properties:
+        assigned_count:
+          type: integer
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+
+    Lead:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        company:
+          type: string
+        source:
+          type: string
+          enum: [website, referral, campaign, leadsquare, import, manual, api, social_media, other]
+        status:
+          type: string
+          enum: [new, assigned, contacted, qualified, unqualified, converted, lost]
+        score:
+          type: integer
+        assigned_to:
+          type: string
+          format: uuid
+        assigned_by:
+          type: string
+          format: uuid
+        assigned_at:
+          type: string
+          format: date-time
+        assignment_method:
+          type: string
+          enum: [round_robin, manual, leadsquare_sync, rule_based]
+        region_id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid

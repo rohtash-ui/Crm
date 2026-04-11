@@ -1,0 +1,114 @@
+asyncapi: 2.6.0
+info:
+  title: Lead Assignment Events
+  version: 1.0.0
+  description: Events published by the Lead Assignment Service to the Kafka event backbone.
+
+channels:
+  crm.lead.assigned.v1:
+    publish:
+      summary: Lead assigned to a user
+      message:
+        $ref: '#/components/messages/LeadAssigned'
+
+  crm.lead.reassigned.v1:
+    publish:
+      summary: Lead reassigned from one user to another
+      message:
+        $ref: '#/components/messages/LeadReassigned'
+
+  crm.lead.created.v1:
+    publish:
+      summary: New lead created
+      message:
+        $ref: '#/components/messages/LeadCreated'
+
+components:
+  messages:
+    LeadAssigned:
+      payload:
+        type: object
+        properties:
+          type:
+            type: string
+            const: crm.lead.assigned.v1
+          tenant_id:
+            type: string
+            format: uuid
+          lead_id:
+            type: string
+            format: uuid
+          payload:
+            type: object
+            properties:
+              assigned_to:
+                type: string
+                format: uuid
+              assigned_by:
+                type: string
+              assignment_method:
+                type: string
+                enum: [round_robin, manual, leadsquare_sync, rule_based]
+              rule_id:
+                type: string
+                format: uuid
+              project_id:
+                type: string
+                format: uuid
+              location_id:
+                type: string
+                format: uuid
+              region_id:
+                type: string
+                format: uuid
+          timestamp:
+            type: string
+            format: date-time
+
+    LeadReassigned:
+      payload:
+        type: object
+        properties:
+          type:
+            type: string
+            const: crm.lead.reassigned.v1
+          tenant_id:
+            type: string
+            format: uuid
+          lead_id:
+            type: string
+            format: uuid
+          payload:
+            type: object
+            properties:
+              assigned_from:
+                type: string
+                format: uuid
+              assigned_to:
+                type: string
+                format: uuid
+              assigned_by:
+                type: string
+              assignment_method:
+                type: string
+                enum: [round_robin, manual, leadsquare_sync, rule_based]
+          timestamp:
+            type: string
+            format: date-time
+
+    LeadCreated:
+      payload:
+        type: object
+        properties:
+          type:
+            type: string
+            const: crm.lead.created.v1
+          tenant_id:
+            type: string
+            format: uuid
+          lead_id:
+            type: string
+            format: uuid
+          timestamp:
+            type: string
+            format: date-time
