@@ -1,0 +1,79 @@
+replicaCount: 2
+
+image:
+  repository: crm-registry/whatsapp-notifications
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8080
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 8
+  targetCPUUtilization: 70
+
+env:
+  PORT: "8080"
+  LOG_LEVEL: "info"
+  KAFKA_GROUP_ID: "whatsapp-notifications"
+  DB_NAME: "whatsapp_notifications"
+  WHATSAPP_API_VERSION: "v18.0"
+
+secrets:
+  - name: whatsapp-notifications-db
+    keys: [DB_HOST, DB_PORT, DB_USER, DB_PASSWORD]
+  - name: whatsapp-api-credentials
+    keys: [WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_WEBHOOK_VERIFY_TOKEN]
+  - name: kafka-credentials
+    keys: [KAFKA_BROKERS]
+
+probes:
+  liveness:
+    path: /health
+    port: 8080
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  readiness:
+    path: /health
+    port: 8080
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+podDisruptionBudget:
+  minAvailable: 1
+
+serviceMonitor:
+  enabled: true
+  interval: 15s
+
+networkPolicy:
+  enabled: true
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: api-gateway
+        - podSelector:
+            matchLabels:
+              app: bff-web
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: kafka
+        - podSelector:
+            matchLabels:
+              app: postgres
+    - ports:
+        - port: 443  # WhatsApp API (graph.facebook.com)

@@ -1,0 +1,274 @@
+openapi: 3.1.0
+info:
+  title: WhatsApp Notification Service API
+  version: 1.0.0
+  description: |
+    REST API for managing WhatsApp notifications in the CRM.
+    Sends automated WhatsApp messages to agents on lead lifecycle events.
+
+servers:
+  - url: /api/v1
+    description: Internal API (behind BFF)
+
+paths:
+  /agents/{agentId}/whatsapp-preferences:
+    get:
+      operationId: getAgentWhatsAppPreferences
+      summary: Get agent's WhatsApp notification preferences
+      tags: [Agent Preferences]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/AgentId'
+      responses:
+        '200':
+          description: Agent preferences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentPreferencesResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      operationId: updateAgentWhatsAppPreferences
+      summary: Update agent's WhatsApp notification preferences
+      tags: [Agent Preferences]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/AgentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationPreferences'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /notifications/history:
+    get:
+      operationId: getNotificationHistory
+      summary: Get notification history with filters
+      tags: [Notifications]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: agentId
+          in: query
+          schema: { type: string }
+        - name: leadId
+          in: query
+          schema: { type: string }
+        - name: eventType
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        '200':
+          description: Notification history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationHistoryResponse'
+
+  /notifications/lead/{leadId}:
+    get:
+      operationId: getLeadNotifications
+      summary: Get WhatsApp notification journey for a lead
+      tags: [Notifications]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: leadId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Lead notification journey
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeadNotificationJourney'
+
+  /notifications/stats:
+    get:
+      operationId: getNotificationStats
+      summary: Get notification statistics
+      tags: [Dashboard]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: days
+          in: query
+          schema: { type: integer, default: 30 }
+      responses:
+        '200':
+          description: Notification statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationStats'
+
+  /whatsapp/config:
+    get:
+      operationId: getWhatsAppConfig
+      summary: Get tenant WhatsApp configuration
+      tags: [Configuration]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: WhatsApp configuration
+    put:
+      operationId: updateWhatsAppConfig
+      summary: Update tenant WhatsApp configuration
+      tags: [Configuration]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WhatsAppConfig'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+
+components:
+  parameters:
+    TenantId:
+      name: X-Tenant-ID
+      in: header
+      required: true
+      schema: { type: string }
+    AgentId:
+      name: agentId
+      in: path
+      required: true
+      schema: { type: string }
+
+  schemas:
+    NotificationPreferences:
+      type: object
+      required: [whatsappEnabled, enabledEvents, timezone, minScoreTierForAlert]
+      properties:
+        whatsappEnabled: { type: boolean }
+        enabledEvents:
+          type: array
+          items:
+            type: string
+            enum:
+              - lead.created
+              - lead.status_changed
+              - lead.assigned
+              - lead.score_updated
+              - lead.activity_detected
+              - lead.converted
+              - lead.lost
+              - lead.reactivated
+              - lead.follow_up_due
+        quietHoursStart: { type: string, pattern: '^\d{2}:\d{2}$' }
+        quietHoursEnd: { type: string, pattern: '^\d{2}:\d{2}$' }
+        timezone: { type: string }
+        minScoreTierForAlert:
+          type: string
+          enum: [hot, warm, cold]
+
+    AgentPreferencesResponse:
+      type: object
+      properties:
+        agentId: { type: string }
+        whatsappNumber: { type: string }
+        preferences:
+          $ref: '#/components/schemas/NotificationPreferences'
+
+    NotificationHistoryResponse:
+      type: object
+      properties:
+        logs:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationLog'
+        total: { type: integer }
+
+    NotificationLog:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        agentId: { type: string }
+        leadId: { type: string }
+        eventType: { type: string }
+        status: { type: string, enum: [queued, sent, delivered, read, failed] }
+        createdAt: { type: string, format: date-time }
+
+    LeadNotificationJourney:
+      type: object
+      properties:
+        leadId: { type: string }
+        totalMessages: { type: integer }
+        messages:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              eventType: { type: string }
+              status: { type: string }
+              messageBody: { type: string }
+              sentAt: { type: string, format: date-time }
+
+    NotificationStats:
+      type: object
+      properties:
+        totalSent: { type: integer }
+        delivered: { type: integer }
+        read: { type: integer }
+        failed: { type: integer }
+        byEventType:
+          type: object
+          additionalProperties: { type: integer }
+
+    WhatsAppConfig:
+      type: object
+      required: [businessAccountId, phoneNumberId, webhookVerifyToken]
+      properties:
+        businessAccountId: { type: string }
+        phoneNumberId: { type: string }
+        apiVersion: { type: string, default: 'v18.0' }
+        webhookVerifyToken: { type: string, minLength: 8 }
+        isActive: { type: boolean, default: true }
+
+  responses:
+    Success:
+      description: Operation successful
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success: { type: boolean }
+              message: { type: string }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string }
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string }
+              details: { type: array }

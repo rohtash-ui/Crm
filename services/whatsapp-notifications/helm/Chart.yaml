@@ -1,0 +1,14 @@
+apiVersion: v2
+name: whatsapp-notifications
+description: WhatsApp notification service for CRM lead lifecycle events
+type: application
+version: 1.0.0
+appVersion: "2026.04.11"
+keywords:
+  - whatsapp
+  - notifications
+  - leads
+  - crm
+maintainers:
+  - name: CRM Notifications Team
+    email: notifications-team@crm.internal

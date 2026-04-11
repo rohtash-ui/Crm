@@ -1,0 +1,146 @@
+asyncapi: 2.6.0
+info:
+  title: WhatsApp Notification Service Events
+  version: 1.0.0
+  description: |
+    Async event contracts for the WhatsApp notification service.
+    Consumes lead lifecycle events from Kafka and produces delivery status events.
+
+channels:
+  crm.lead.created.v1:
+    subscribe:
+      operationId: onLeadCreated
+      summary: New lead entered the system
+      message:
+        $ref: '#/components/messages/LeadEvent'
+
+  crm.lead.status_changed.v1:
+    subscribe:
+      operationId: onLeadStatusChanged
+      summary: Lead status was updated
+      message:
+        $ref: '#/components/messages/LeadEvent'
+
+  crm.lead.assigned.v1:
+    subscribe:
+      operationId: onLeadAssigned
+      summary: Lead was assigned or reassigned to an agent
+      message:
+        $ref: '#/components/messages/LeadEvent'
+
+  crm.lead.score_updated.v1:
+    subscribe:
+      operationId: onLeadScoreUpdated
+      summary: Lead score changed tiers
+      message:
+        $ref: '#/components/messages/LeadEvent'
+
+  crm.lead.activity_detected.v1:
+    subscribe:
+      operationId: onLeadActivityDetected
+      summary: Lead showed engagement activity
+      message:
+        $ref: '#/components/messages/LeadEvent'
+
+  crm.lead.converted.v1:
+    subscribe:
+      operationId: onLeadConverted
+      summary: Lead was converted to a deal
+      message:
+        $ref: '#/components/messages/LeadEvent'
+
+  crm.lead.lost.v1:
+    subscribe:
+      operationId: onLeadLost
+      summary: Lead was marked as lost
+      message:
+        $ref: '#/components/messages/LeadEvent'
+
+  crm.lead.reactivated.v1:
+    subscribe:
+      operationId: onLeadReactivated
+      summary: Dormant lead showed renewed interest
+      message:
+        $ref: '#/components/messages/LeadEvent'
+
+  crm.lead.follow_up_due.v1:
+    subscribe:
+      operationId: onLeadFollowUpDue
+      summary: Scheduled follow-up reminder
+      message:
+        $ref: '#/components/messages/LeadEvent'
+
+  crm.whatsapp.notification.sent.v1:
+    publish:
+      operationId: onNotificationSent
+      summary: WhatsApp notification was sent to agent
+      message:
+        $ref: '#/components/messages/NotificationStatusEvent'
+
+  crm.whatsapp.notification.delivered.v1:
+    publish:
+      operationId: onNotificationDelivered
+      summary: WhatsApp notification was delivered
+      message:
+        $ref: '#/components/messages/NotificationStatusEvent'
+
+  crm.whatsapp.notification.failed.v1:
+    publish:
+      operationId: onNotificationFailed
+      summary: WhatsApp notification failed to send
+      message:
+        $ref: '#/components/messages/NotificationStatusEvent'
+
+components:
+  messages:
+    LeadEvent:
+      payload:
+        type: object
+        required:
+          - eventId
+          - eventType
+          - tenantId
+          - leadId
+          - leadName
+          - assignedAgentId
+          - occurredAt
+        properties:
+          eventId: { type: string, format: uuid }
+          eventType: { type: string }
+          tenantId: { type: string }
+          leadId: { type: string }
+          leadName: { type: string }
+          leadEmail: { type: string, format: email }
+          leadPhone: { type: string }
+          leadSource: { type: string }
+          leadScore: { type: number }
+          leadScoreTier: { type: string, enum: [hot, warm, cold] }
+          previousStatus: { type: string }
+          currentStatus: { type: string }
+          assignedAgentId: { type: string }
+          previousAgentId: { type: string }
+          dealValue: { type: number }
+          currency: { type: string }
+          metadata: { type: object }
+          occurredAt: { type: string, format: date-time }
+
+    NotificationStatusEvent:
+      payload:
+        type: object
+        required:
+          - messageId
+          - tenantId
+          - agentId
+          - leadId
+          - status
+          - occurredAt
+        properties:
+          messageId: { type: string, format: uuid }
+          tenantId: { type: string }
+          agentId: { type: string }
+          leadId: { type: string }
+          eventType: { type: string }
+          status: { type: string, enum: [sent, delivered, read, failed] }
+          whatsappMessageId: { type: string }
+          errorMessage: { type: string }
+          occurredAt: { type: string, format: date-time }
