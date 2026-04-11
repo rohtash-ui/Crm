@@ -1,0 +1,280 @@
+openapi: 3.1.0
+info:
+  title: Location Tracking Service
+  version: 1.0.0
+  description: |
+    Continuous GPS tracking for CRM field teams.
+    Ingests location batches from mobile devices, serves live positions
+    and historical trails.
+
+servers:
+  - url: /api/v1/location-tracking
+
+paths:
+  /batch:
+    post:
+      operationId: ingestBatch
+      summary: Ingest a batch of GPS location points
+      description: |
+        Accepts a batch of location points from a mobile device.
+        Idempotent — re-sending the same batch_id is a no-op.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IngestBatchRequest'
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '202':
+          description: Batch accepted for processing.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: accepted
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          description: Rate limited — retry after delay.
+
+  /history:
+    get:
+      operationId: getHistory
+      summary: Get historical GPS points for a user
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - $ref: '#/components/parameters/TenantID'
+      responses:
+        '200':
+          description: List of location points.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LocationPoint'
+
+  /live:
+    get:
+      operationId: getLiveLocations
+      summary: Get latest known position for all tracked users in a tenant
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+      responses:
+        '200':
+          description: List of latest locations.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LatestLocation'
+
+  /config:
+    get:
+      operationId: getConfig
+      summary: Get GPS tracking configuration for the tenant
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+      responses:
+        '200':
+          description: Tracking configuration.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrackingConfig'
+
+components:
+  parameters:
+    TenantID:
+      name: X-Tenant-ID
+      in: header
+      required: true
+      schema:
+        type: string
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+
+  schemas:
+    IngestBatchRequest:
+      type: object
+      required: [batch_id, sent_at, updates]
+      properties:
+        batch_id:
+          type: string
+        sent_at:
+          type: integer
+          description: Unix timestamp in milliseconds.
+        updates:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocationPointInput'
+
+    LocationPointInput:
+      type: object
+      required: [tenant_id, user_id, device_id, latitude, longitude, accuracy, timestamp]
+      properties:
+        tenant_id:
+          type: string
+        user_id:
+          type: string
+        device_id:
+          type: string
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        altitude:
+          type: number
+          format: double
+          nullable: true
+        accuracy:
+          type: number
+          format: double
+        heading:
+          type: number
+          format: double
+          nullable: true
+        speed:
+          type: number
+          format: double
+          nullable: true
+        timestamp:
+          type: integer
+          description: Unix timestamp in milliseconds.
+        battery_level:
+          type: number
+          format: double
+          nullable: true
+        network_type:
+          type: string
+          enum: [wifi, cellular, none]
+        is_moving:
+          type: boolean
+        activity_type:
+          type: string
+          enum: [stationary, walking, driving, unknown]
+
+    LocationPoint:
+      type: object
+      properties:
+        tenant_id:
+          type: string
+        user_id:
+          type: string
+        device_id:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        altitude:
+          type: number
+          nullable: true
+        accuracy:
+          type: number
+        heading:
+          type: number
+          nullable: true
+        speed:
+          type: number
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+        battery_level:
+          type: number
+          nullable: true
+        network_type:
+          type: string
+        is_moving:
+          type: boolean
+        activity_type:
+          type: string
+
+    LatestLocation:
+      type: object
+      properties:
+        tenant_id:
+          type: string
+        user_id:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        accuracy:
+          type: number
+        is_moving:
+          type: boolean
+        updated_at:
+          type: string
+          format: date-time
+
+    TrackingConfig:
+      type: object
+      properties:
+        tenant_id:
+          type: string
+        enabled:
+          type: boolean
+        mode:
+          type: string
+          enum: [high_accuracy, balanced, low_power]
+        interval_ms:
+          type: integer
+        distance_filter_meters:
+          type: number
+        batch_upload_interval_ms:
+          type: integer
+        max_batch_size:
+          type: integer
+        background_tracking_enabled:
+          type: boolean
+        active_hours_start:
+          type: integer
+          nullable: true
+        active_hours_end:
+          type: integer
+          nullable: true
+        active_days:
+          type: array
+          items:
+            type: integer
+          nullable: true
+
+  responses:
+    BadRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

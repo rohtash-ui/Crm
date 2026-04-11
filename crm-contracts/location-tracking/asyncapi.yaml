@@ -1,0 +1,77 @@
+asyncapi: 2.6.0
+info:
+  title: Location Tracking Events
+  version: 1.0.0
+  description: |
+    Domain events emitted by the location-tracking service to the
+    Kafka event backbone. Consumers include Activities (timeline logging),
+    Analytics (movement heatmaps), and Notifications (geofence alerts).
+
+channels:
+  location.events:
+    description: Emitted for every GPS fix ingested.
+    publish:
+      operationId: locationRecorded
+      message:
+        $ref: '#/components/messages/LocationRecorded'
+
+  location.config-changed:
+    description: Emitted when a tenant's tracking config is updated.
+    publish:
+      operationId: configChanged
+      message:
+        $ref: '#/components/messages/TrackingConfigChanged'
+
+components:
+  messages:
+    LocationRecorded:
+      name: location.recorded
+      title: Location Recorded
+      contentType: application/json
+      payload:
+        type: object
+        required: [event, tenant_id, user_id, lat, lng, ts]
+        properties:
+          event:
+            type: string
+            const: location.recorded
+          tenant_id:
+            type: string
+          user_id:
+            type: string
+          lat:
+            type: number
+            format: double
+          lng:
+            type: number
+            format: double
+          accuracy:
+            type: number
+          is_moving:
+            type: boolean
+          activity_type:
+            type: string
+            enum: [stationary, walking, driving, unknown]
+          ts:
+            type: string
+            format: date-time
+
+    TrackingConfigChanged:
+      name: location.config_changed
+      title: Tracking Config Changed
+      contentType: application/json
+      payload:
+        type: object
+        required: [event, tenant_id, enabled]
+        properties:
+          event:
+            type: string
+            const: location.config_changed
+          tenant_id:
+            type: string
+          enabled:
+            type: boolean
+          mode:
+            type: string
+          interval_ms:
+            type: integer
