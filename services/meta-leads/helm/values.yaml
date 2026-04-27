@@ -1,0 +1,54 @@
+replicaCount: 2
+
+image:
+  repository: crm/meta-leads
+  pullPolicy: IfNotPresent
+  tag: latest
+
+service:
+  type: ClusterIP
+  port: 8080
+
+env:
+  META_GRAPH_API_VERSION: "v18.0"
+  POLL_INTERVAL_SECONDS: "300"
+  POLL_SAFETY_OVERLAP_SECONDS: "600"
+  HTTP_PORT: "8080"
+
+secrets:
+  - name: meta-leads-secrets
+    keys:
+      - META_APP_ID
+      - META_APP_SECRET
+      - META_WEBHOOK_VERIFY_TOKEN
+      - DATABASE_URL
+      - KAFKA_BROKERS
+      - KMS_KEY_ID
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: 8080
+  initialDelaySeconds: 3
+  periodSeconds: 5
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 8
+  targetCPUUtilizationPercentage: 70

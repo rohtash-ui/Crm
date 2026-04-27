@@ -21,6 +21,7 @@ on-call responder should open to understand how the system stays up.
 | 08 | [self-healing-loops.md](08-self-healing-loops.md) | Curious how the system auto-recovers |
 | 09 | [incident-response.md](09-incident-response.md) | Running or joining an incident |
 | 10 | [security-compliance.md](10-security-compliance.md) | Working on auth, data protection, audits |
+| 11 | [meta-leads-integration.md](11-meta-leads-integration.md) | Integrating Meta (Facebook) Lead Ads |
 
 ## Audience-based entry points
 

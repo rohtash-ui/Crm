@@ -1,0 +1,106 @@
+asyncapi: 2.6.0
+info:
+  title: Meta Leads Integration Events
+  version: 1.0.0
+  description: >
+    Events published by the Meta Leads service to the Kafka event backbone.
+    This service is the source-of-truth producer for these event schemas.
+
+channels:
+  crm.lead.created.v1:
+    publish:
+      summary: New lead ingested from Meta Lead Ads
+      message:
+        $ref: '#/components/messages/LeadCreated'
+
+  crm.meta_connection.revoked.v1:
+    publish:
+      summary: Meta page connection token was revoked or expired
+      message:
+        $ref: '#/components/messages/MetaConnectionRevoked'
+
+components:
+  messages:
+    LeadCreated:
+      payload:
+        type: object
+        required:
+          - type
+          - tenant_id
+          - lead_id
+          - source
+          - external_source
+          - external_id
+          - meta
+          - ingested_at
+        properties:
+          type:
+            type: string
+            const: crm.lead.created.v1
+          tenant_id:
+            type: string
+            format: uuid
+          lead_id:
+            type: string
+            description: "Format: meta:<page_id>:<leadgen_id>"
+          source:
+            type: string
+            const: social_media
+          external_source:
+            type: string
+            const: meta
+          external_id:
+            type: string
+            description: "Format: meta:<page_id>:<leadgen_id>"
+          first_name:
+            type: string
+          last_name:
+            type: string
+          email:
+            type: string
+            format: email
+          phone:
+            type: string
+          company:
+            type: string
+          custom_fields:
+            type: object
+            additionalProperties:
+              type: string
+          meta:
+            type: object
+            required:
+              - page_id
+              - form_id
+            properties:
+              page_id:
+                type: string
+              form_id:
+                type: string
+              ad_id:
+                type: string
+              created_time:
+                type: string
+          ingested_at:
+            type: string
+            format: date-time
+
+    MetaConnectionRevoked:
+      payload:
+        type: object
+        required:
+          - type
+          - tenant_id
+          - page_id
+          - reason
+        properties:
+          type:
+            type: string
+            const: crm.meta_connection.revoked.v1
+          tenant_id:
+            type: string
+            format: uuid
+          page_id:
+            type: string
+          reason:
+            type: string

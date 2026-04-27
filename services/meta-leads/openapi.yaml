@@ -1,0 +1,179 @@
+openapi: 3.0.3
+info:
+  title: Meta Leads Integration Service
+  description: >
+    Ingests leads from Meta (Facebook) Lead Ads via webhook and polling.
+    Publishes crm.lead.created.v1 events to the Kafka event backbone.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080
+
+paths:
+  /webhooks/meta:
+    get:
+      summary: Meta webhook verification (hub.challenge handshake)
+      parameters:
+        - name: hub.mode
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [subscribe]
+        - name: hub.verify_token
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: hub.challenge
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Returns the hub.challenge string
+          content:
+            text/plain:
+              schema:
+                type: string
+        '403':
+          description: Invalid verify token
+
+    post:
+      summary: Receive Meta leadgen webhook events
+      description: >
+        Meta sends leadgen events here. Body is verified via X-Hub-Signature-256
+        HMAC-SHA256 against the app secret.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookPayload'
+      responses:
+        '200':
+          description: Accepted
+        '401':
+          description: Invalid signature
+
+  /api/v1/meta/connections:
+    post:
+      summary: Register a Meta page connection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateConnectionRequest'
+      responses:
+        '201':
+          description: Connection created
+        '400':
+          description: Validation error
+
+    get:
+      summary: List active Meta connections for a tenant
+      parameters:
+        - name: X-Tenant-ID
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of connections
+
+  /api/v1/meta/forms:
+    post:
+      summary: Register a Meta Lead Ad form
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFormRequest'
+      responses:
+        '201':
+          description: Form registered
+
+  /api/v1/meta/sync:
+    post:
+      summary: Trigger manual poll of all active forms
+      responses:
+        '200':
+          description: Sync completed
+
+  /healthz:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: Service is healthy
+
+components:
+  schemas:
+    WebhookPayload:
+      type: object
+      properties:
+        object:
+          type: string
+          example: page
+        entry:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              time:
+                type: integer
+              changes:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    field:
+                      type: string
+                      enum: [leadgen]
+                    value:
+                      type: object
+                      properties:
+                        form_id:
+                          type: string
+                        leadgen_id:
+                          type: string
+                        page_id:
+                          type: string
+                        created_time:
+                          type: integer
+
+    CreateConnectionRequest:
+      type: object
+      required: [tenant_id, page_id, page_access_token]
+      properties:
+        tenant_id:
+          type: string
+          format: uuid
+        page_id:
+          type: string
+        app_id:
+          type: string
+        page_access_token:
+          type: string
+
+    CreateFormRequest:
+      type: object
+      required: [tenant_id, form_id, connection_id]
+      properties:
+        tenant_id:
+          type: string
+          format: uuid
+        form_id:
+          type: string
+        connection_id:
+          type: string
+          format: uuid
+        form_name:
+          type: string
