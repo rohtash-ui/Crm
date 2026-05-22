@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Next Footstep — June 2025 Social Media Calendar</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { background: #080808; color: #F5F0E8; font-family: 'Inter', sans-serif; font-size: 14px; line-height: 1.6; min-height: 100vh; }
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-track { background: #080808; }
+    ::-webkit-scrollbar-thumb { background: #C9A84C55; border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: #C9A84C; }
+    @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { animation: fadeSlideIn 0.35s ease forwards; }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useCallback } = React;
+
+// ─── THEME ─────────────────────────────────────────────────────────────────
+const C = {
+  bg: '#080808', bg2: '#0F0F0F', surface: '#151515', card: '#1A1A1A',
+  cardHov: '#202020', border: '#242424', border2: '#2E2E2E',
+  gold: '#C9A84C', goldL: '#E5CB7A', goldD: '#C9A84C22',
+  white: '#F5F0E8', muted: '#6B6B6B', muted2: '#9A9A9A',
+  green: '#4A8A5A', greenL: '#6BAD7E',
+  blue: '#3D6080', blueL: '#6B9BBF',
+  warm: '#8A5A30', warmL: '#C08B5A',
+  purple: '#5A457A', purpleL: '#9B87C0',
+  red: '#8A3A3A',
+};
+
+// ─── DATA ──────────────────────────────────────────────────────────────────
+
+const PILLARS = [
+  {
+    icon: '◈', title: 'Cinematic Lifestyle', color: C.gold,
+    desc: 'Aspirational visual storytelling. Show the life, not the listing. Every post should feel like a scene from a premium architectural documentary.',
+    freq: '2× / week', formats: ['Reels 9:16', 'Cinematic Carousels'],
+  },
+  {
+    icon: '◎', title: 'Investment Intelligence', color: C.blueL,
+    desc: 'Position Next Footstep as thought leaders. Educate HNWIs on real estate as strategic wealth allocation — not just property purchase.',
+    freq: '1–2× / week', formats: ['Data Carousels', 'Single Info Posts'],
+  },
+  {
+    icon: '⬡', title: 'Biophilic Luxury', color: C.greenL,
+    desc: 'Green corridors, canopy living, eco-conscious design. Sustainability is no longer a compromise — it is the ultimate luxury differentiator.',
+    freq: '1× / week', formats: ['Photo Series', 'Reels'],
+  },
+  {
+    icon: '▲', title: 'Generational Legacy', color: C.warmL,
+    desc: 'Speak to the patriarch and matriarch building wealth for their lineage. Real estate as a vessel for heritage, memory, and multi-generational assets.',
+    freq: '1× / week', formats: ['Emotional Carousels', 'Short Films'],
+  },
+];
+
+const PERSONAS = [
+  { title: 'The Tech Executive', age: '35–50', income: '₹80L–₹3Cr+ / yr', pain: 'Market volatility eating equity portfolio gains with no tangible floor', desire: 'Appreciating physical asset with a prestigious address and zero management overhead' },
+  { title: 'The Corporate Leader', age: '45–60', income: '₹1Cr+ / yr', pain: 'No bandwidth for complex real estate due diligence across multiple developers', desire: 'A single trusted advisor who curates, vets, and presents only shortlisted options' },
+  { title: 'The NRI Investor', age: '38–55', income: 'Global HNI wealth', pain: 'Opaque Indian market, lack of RERA-verified transparency, fear of developer fraud', desire: 'Premium gated plots with documented title, RERA compliance, and long-horizon ROI clarity' },
+  { title: 'The Legacy Builder', age: '50–65', income: 'HNI net worth ₹10Cr+', pain: 'Uncertain wealth transfer vehicles — equity and liquid assets feel transient and divisible', desire: 'Prime land as a generational inheritance anchor that bears the family name across decades' },
+];
+
+const SCHEDULE = [
+  { day: 'Monday', time: '9:00 AM', type: 'Investment / Tactical', icon: '◎' },
+  { day: 'Wednesday', time: '11:00 AM', type: 'Educational Carousel', icon: '◈' },
+  { day: 'Friday', time: '5:30 PM', type: 'Lifestyle / Cinematic', icon: '▶' },
+  { day: 'Saturday', time: '10:00 AM', type: 'Legacy / Emotional', icon: '▲' },
+];
+
+const CALENDAR = [
+  {
+    week: 1, theme: 'Setting The Stage',
+    subtitle: 'June 1–7  ·  Establish brand authority & set the aspirational tone',
+    posts: [
+      {
+        date: 'June 2', day: 'Monday', type: 'Cinematic Brand Statement', typeColor: C.gold,
+        hook: '"While others sell properties, we curate futures."',
+        format: 'Reel · 9:16 · 30–45 sec',
+        visual: `Aerial drone shot gliding over a pristine gated community at golden hour. Open wide over the canopy, slowly descend into the private tree-lined boulevard. End with a slow push into a private terrace overlooking a sunset valley. No text overlays. One seamless, uncut motion. Color grade: warm amber, high contrast, light film grain. Soft orchestral swell — no voiceover. Logo lock-up final frame only.`,
+        caption: `Some addresses are just coordinates.\nOthers are a statement about who you have become.\n\nAt Next Footstep, we don't show you listings.\nWe understand your vision — and find the land that becomes its foundation.\n\nBecause the most discerning investors don't simply buy property.\nThey build legacy.\n\n𝙉𝙚𝙭𝙩 𝙁𝙤𝙤𝙩𝙨𝙩𝙚𝙥. 𝙀𝙫𝙚𝙧𝙮 𝙨𝙩𝙚𝙥, 𝙘𝙪𝙧𝙖𝙩𝙚𝙙.\n\n#LuxuryRealEstate #PrivateEstates #GatedLiving #PremiumPlots #LegacyWealth #NextFootstep`,
+        cta: `DM us "CURATE" and tell us about the property you have been envisioning. No sales calls. No brochure drops. Just a private, unhurried conversation.`,
+      },
+      {
+        date: 'June 4', day: 'Wednesday', type: 'Investment Intelligence', typeColor: C.blueL,
+        hook: '"It\'s June. Your capital is already deployed. The question is — is it performing?"',
+        format: 'Carousel · 6 Slides · 1:1',
+        visual: `Slide 1: Strong typographic hook on deep charcoal — single sentence, gold accent word. Slides 2–5: Elegant dark-mode comparison of asset classes (equity, gold, FD, premium land) over 5 & 10-year horizons. Gold typography, clean bar charts, no clipart or gradient fills. Think Bloomberg terminal meets architectural lookbook. Slide 6: Brand sign-off with a single CTA line. No price tags visible anywhere.`,
+        caption: `Most mid-year portfolio reviews are rearview mirror exercises.\nThe investors we work with are already positioning for H2.\n\nWhat ₹1 Cr invested looked like over the last decade:\n→ Fixed deposits: Inflation-adjusted loss\n→ Equity MF: High volatility, moderate CAGR\n→ Gold: Decent store of value, no yield\n→ Premium gated land: 3–4× capital, zero maintenance liability\n\nLand doesn't simply hedge inflation.\nIn the right micro-market, it rewrites your net worth statement.\n\nSave this post before Q3 arrives.\n\n#WealthStrategy #RealEstateInvestment #HNIInvestors #AlternativeAssets #LandAppreciation`,
+        cta: `DM "Q2 REVIEW" for a complimentary mid-year real estate portfolio briefing. Private. No obligation. No follow-up unless you ask.`,
+      },
+      {
+        date: 'June 5', day: 'Thursday · World Environment Day', type: 'Biophilic Luxury', typeColor: C.greenL,
+        special: '🌿 World Environment Day',
+        hook: '"The most expensive amenity in 2025 isn\'t a rooftop pool. It\'s clean air."',
+        format: 'Reel · 9:16 · 30 sec',
+        visual: `Slow-motion pan through a manicured green corridor inside a premium gated layout. Morning light filtering through 40-foot canopy trees. Dew on leaves in close-up. Birdsong as the only soundtrack — no music, no voiceover. Let nature do the work. End on a wide shot: a premium villa plot boundary with heritage trees as its natural perimeter. Final text card only: "The next luxury is nature." — clean sans-serif, gold on black.`,
+        caption: `Today the world talks about the environment.\nThe rarest communities have already built it in.\n\nWhile most developments list amenities,\nthe truly premium ones offer ecosystems.\n\nPrivate canopy corridors. Natural drainage swales.\nZero concrete footprint at boundary edges.\nBiophilic design principles woven into every plot allocation.\n\nBecause the most valuable thing you can own in a concrete city\nis a private green lung.\n\nHappy World Environment Day.\n\n#WorldEnvironmentDay #BiophilicDesign #GreenLiving #SustainableLuxury #EcoEstates #PremiumLiving`,
+        cta: `DM "GREEN" to explore our curated list of eco-integrated gated communities where nature is the headline amenity — not an afterthought.`,
+      },
+      {
+        date: 'June 7', day: 'Saturday', type: 'Cinematic Lifestyle', typeColor: C.gold,
+        hook: '"Some weekends deserve a different kind of address."',
+        format: 'Reel · 9:16 · 20–30 sec',
+        visual: `Slow-motion morning sequence: a private terrace bathed in early golden hour light. A cup of black coffee placed on a stone ledge overlooking a lush green valley. A single hand reaches out — no face shown, just the moment. Ambient sound: distant birds, a soft breeze. End frame: the terrace expanding into a wide-angle shot revealing the full estate boundary. Color grade: warm, low-saturation, film-grain finish. No text overlays except a subtle logo lock-up at the very end.`,
+        caption: `Some weekends, you want to escape the city.\nOthers, you want the city to feel a world away —\nand still call that home.\n\nThis is what happens when architecture understands you.\nWhen the land was chosen for how morning light lands on it.\nWhen a terrace isn't an add-on but the reason the home was designed.\n\nPrivate. Curated. Yours.\n\n#WeekendVibes #LuxuryHome #PrivateEstate #SaturdayMorning #ArchitecturalLiving #NextFootstep`,
+        cta: `DM "WEEKEND" to receive our privately curated lookbook of estates designed for the life you have actually built — not the one being advertised to everyone.`,
+      },
+    ],
+  },
+  {
+    week: 2, theme: 'Investment Intelligence',
+    subtitle: 'June 8–14  ·  Position as the HNWI\'s most trusted real estate intelligence source',
+    posts: [
+      {
+        date: 'June 9', day: 'Monday', type: 'Tactical — Strategic Move', typeColor: C.blueL,
+        hook: '"Before Q3 begins, the smartest real estate investors are making one quiet move."',
+        format: 'Single Image · 1:1',
+        visual: `Extreme close-up flat lay on dark Italian marble: a vintage Montblanc pen resting on a premium property agreement, a glass of aged whiskey slightly out of focus in the background. Dramatic single-source side lighting creating deep shadows. No text overlay on the image — the composition carries the entire story. Brand watermark bottom-right corner only, small and restrained.`,
+        caption: `Every seasoned investor knows:\nThe best time to enter premium real estate is before the market announces it's time.\n\nRight now, in select gated communities across key growth corridors,\nplot prices sit at an 18-month low — driven by broader market sentiment, not by fundamentals.\n\nThe fundamentals have not changed:\n→ Infrastructure development is converging\n→ Supply of premium gated land: permanently finite\n→ Demand from HNI buyers: quietly accelerating\n\nThe announcement of the opportunity always comes after the opportunity.\n\n#InvestmentStrategy #LuxuryRealEstate #PrivatePlots #WealthCreation #RealEstateIntelligence`,
+        cta: `DM "Q3" for a private briefing on the two micro-markets showing the strongest fundamentals right now. No deck sent unless you ask for one.`,
+      },
+      {
+        date: 'June 11', day: 'Wednesday', type: 'Educational Carousel', typeColor: C.blueL,
+        hook: '"Land appreciates. Buildings depreciate. Here\'s the data most developers don\'t want you to see."',
+        format: 'Carousel · 7 Slides · 1:1',
+        visual: `Premium dark-mode carousel throughout. Background: #0F0F0F. Gold headers, off-white body text, clean divider lines. Slide 1: Bold typographic hook — no imagery. Slides 2–6: Data storytelling — depreciation curve of an apartment over 10 years, land appreciation comparison, maintenance cost burden analysis, resale velocity comparison, CAGR breakdown. Slide 7: Next Footstep positioning statement + CTA. No clipart, no gradient-filled pie charts. Think: a Goldman Sachs private client deck meets an architectural review.`,
+        caption: `The real estate industry has spent three decades conflating "property" with "apartment."\n\nWhat they haven't told you:\n\nA 2,000 sqft apartment built today depreciates the moment possession is handed over.\nA premium 2,000 sqft plot in the right gated community has appreciated 3–8× over the last decade — with zero maintenance liability, zero body corporate fees, zero depreciation.\n\nSwipe for the numbers.\n\nWe curate plots, not just properties.\nThe distinction matters more than most people realise.\n\n#RealEstateFacts #LandInvestment #PlotVsApartment #SmartInvesting #WealthPreservation`,
+        cta: `Save this carousel. DM "PLOT REPORT" to receive our full 12-page analysis on premium gated plot performance — segmented by the micro-market you care about.`,
+      },
+      {
+        date: 'June 13', day: 'Friday', type: 'Cinematic Lifestyle', typeColor: C.gold,
+        hook: '"The home you have. The address you deserve."',
+        format: 'Reel · 9:16 · 30 sec',
+        visual: `Dusk timelapse of a private infinity pool overlooking a valley or natural landscape. Start at blue hour — water perfectly still, sky graduating from indigo to deep amber. Subtle ambient lighting activates around the pool perimeter as dusk deepens. A single silhouette stands at the pool edge, facing the view. No voiceover. A haunting, atmospheric piano track at low volume. End on a logo lock-up with a very subtle gold particle drift.`,
+        caption: `Friday evening looks different when your address is right.\n\nNot because of the square footage.\nNot because of the fixtures or the finish.\n\nBecause of the silence you came home to.\nBecause of the view that belongs exclusively to you.\nBecause every time you step through that gate,\nyou remember precisely why you built what you built.\n\nThis is what we help our clients find.\nNot just a property. A reward for everything they have earned.\n\n#FridayFeeling #LuxuryEstate #PrivatePool #HighEndLiving #EstateLiving #NextFootstep`,
+        cta: `DM "FRIDAY ESCAPE" to request a private showcase of our most exclusive current inventory — curated for you before the weekend.`,
+      },
+      {
+        date: 'June 14', day: 'Saturday', type: 'Generational Trust', typeColor: C.warmL,
+        hook: '"The best gift you can give your family isn\'t wrapped. It\'s built."',
+        format: 'Cinematic Photo · 4:5',
+        visual: `A father and young son walking through a premium tree-lined private boulevard at golden hour. The son holds the father's hand, both walking away from camera. Lush canopy greenery on both sides framing the shot. Wide, unhurried composition. Warm film tones, slight vignette. No text overlay at all. The image should feel indistinguishable from a luxury watch or private banking advertisement — pure emotion and aspiration without a single word.`,
+        caption: `At some point, every builder of wealth asks the same question:\n\nWhat remains after me?\n\nNot the title. Not the corner office.\nNot the portfolio balance on a screen.\n\nBut the land that bears your name.\nThe gate your children open with their key.\nThe canopy trees your grandchildren play beneath.\n\nReal estate isn't simply an asset class.\nFor those who think in generations, it's the most durable act of love.\n\n#GenerationalWealth #FamilyLegacy #LandOwnership #WealthTransfer #PremiumEstate #LegacyBuilding`,
+        cta: `DM "LEGACY" to speak privately with a consultant about structuring a multi-generational real estate acquisition — designed for inheritance, not just investment.`,
+      },
+    ],
+  },
+  {
+    week: 3, theme: 'Legacy & Serenity',
+    subtitle: 'June 15–21  ·  Father\'s Day + Yoga Day — speak to the soul behind the wealth',
+    posts: [
+      {
+        date: 'June 16', day: 'Monday', type: 'Trend Analysis', typeColor: C.purpleL,
+        hook: '"Summer 2025\'s defining luxury real estate trend isn\'t a location. It\'s a philosophy."',
+        format: 'Carousel · 5 Slides · 1:1',
+        visual: `Architectural photography series. Each image full-bleed, no heavy text overlays — just a one-line caption in thin white at bottom-left. Images: open-plan living room dissolving into a lush private garden through floor-to-ceiling glass; a private interior courtyard with a natural stone water feature; a double-height library with exposed timber and afternoon light; a private meditation pavilion at the plot boundary; a dawn aerial of a gated community showing the green-to-built ratio. Final slide: summary typography with Next Footstep branding.`,
+        caption: `Every market cycle creates a new luxury threshold.\n\n2015: A concierge desk.\n2019: A smart home system.\n2025: Something the last few years gave us a new vocabulary for.\n\n→ Private outdoor space that actually breathes\n→ Architecture where silence is designed in, not accidental\n→ A home that heals — biophilically, acoustically, spiritually\n→ Land. Not a unit number.\n\nThe buyers we work with don't acquire properties anymore.\nThey acquire environments.\n\nSwipe to see what that actually looks like.\n\n#LuxuryTrends2025 #SummerHome #BiophilicLiving #ArchitectureLovers #PrivateEstate`,
+        cta: `DM "2025 TRENDS" to receive our Summer Luxury Real Estate Insight Report — crafted exclusively for premium investors navigating the current market.`,
+      },
+      {
+        date: 'June 18', day: 'Wednesday', type: 'Investment Intelligence', typeColor: C.blueL,
+        hook: '"The maths on premium plot returns that nobody is putting in front of you."',
+        format: 'Carousel · 6 Slides · 1:1',
+        visual: `Dark-mode financial carousel. Slide 1: Bold typographic statement — no imagery. Slides 2–5: Clean data visualisations — IRR comparison across asset classes, capital appreciation curve on a ₹1Cr plot investment over 10 years, RERA compliance as risk mitigation factor, supply-constrained gated land vs. generic housing stock. Gold on charcoal palette throughout. Absolutely no stock market ticker graphics, house emoji illustrations, or infographic clip-art. Final slide: offer for personalised financial model.`,
+        caption: `Let's talk numbers.\n\n₹1 Cr invested in a premium gated plot in a Tier-1 periphery market in 2015:\nEstimated current value: ₹3.2–4.8 Cr (micro-market dependent)\nAnnualised CAGR: 19–26%\nMaintenance cost over decade: ₹0\nDepreciation liability: None\nLiquidity: High (premium gated > generic housing)\n\nThis isn't speculation. This is documented, location-specific performance.\n\nSwipe for the methodology.\n\n#RealEstateROI #CapitalAppreciation #PlotInvestment #WealthGrowth #HNIPortfolio`,
+        cta: `DM "ROI MODEL" for a private, personalised appreciation projection mapped to your preferred location, investment horizon, and ticket size.`,
+      },
+      {
+        date: 'June 20', day: 'Friday · Father\'s Day Eve', type: 'Generational Legacy', typeColor: C.warmL,
+        special: '👨‍👦 Father\'s Day Eve',
+        hook: '"What if this Father\'s Day, the gift was a legacy that outlives both of you?"',
+        format: 'Cinematic Reel · 9:16 · 45–60 sec',
+        visual: `A premium short film in two acts. Act 1: A man in his early sixties, jacket draped over one arm, walking through his private estate at golden hour. He surveys the land with quiet satisfaction — not pride, but peace. Act 2: Cut to the same estate, same camera angle, same light — but now a man in his mid-thirties stands in exactly the same spot, doing exactly the same thing. The generational echo is entirely visual, never narrated. Soft string quartet score throughout. End card (white text, black background): "Some investments don't pay off in your lifetime. They pay off in your children's." — Next Footstep.`,
+        caption: `He didn't buy it for himself.\n\nHe bought it the year his son was born.\nAnd every year since,\nhe has watched its value compound alongside his legacy.\n\nThe most meaningful investments aren't the ones that alter your bank statement.\nThey are the ones that alter your family's story.\n\nTo the fathers building more than a career.\nBuilding a heritage.\n\nHappy Father's Day, tomorrow.\n\n#FathersDay2025 #GenerationalWealth #LegacyBuilding #ForMyFamily #RealEstateLegacy`,
+        cta: `DM "FOR MY FAMILY" to explore curated premium plots currently being acquired by clients thinking exactly this way — for the generation that follows.`,
+      },
+      {
+        date: 'June 21', day: 'Saturday · Father\'s Day + Yoga Day', type: 'Wellness & Legacy', typeColor: C.greenL,
+        special: '🧘 Father\'s Day · Int\'l Yoga Day',
+        hook: '"For the father who built an empire. Now build the sanctuary."',
+        format: 'Split Reel · 9:16 · 30–40 sec',
+        visual: `Two-part visual narrative in one seamless reel. First half: pre-dawn at a private meditation pavilion on a premium estate. A single figure in white, seated in stillness, facing an open landscape as the horizon lightens. Absolute silence, then the first birdsong. Second half: the same man now walking through the same estate with his adult children beside him. The transition is a slow cross-dissolve — same location, different dimension of life. No text overlays during the film. End title card only: "Where wellness and legacy live at the same address." — gold on black.`,
+        caption: `Today, the world celebrates two things.\nA man's roots. And the practice of finding stillness within.\n\nAt the highest level, both point to the same truth:\n\nThe most successful people we know are building sanctuaries — not merely assets.\n\nA private meditation garden.\nA yoga pavilion open to the morning sky.\nAn estate where the weekend genuinely restores you.\n\nBecause the right property doesn't only appreciate in rupees.\nIt appreciates in the quality of every morning you spend on it.\n\nHappy Father's Day. Happy Yoga Day.\n\n#FathersDay #InternationalYogaDay #YogaDay2025 #WellnessHome #SanctuaryLiving #LuxuryWellness`,
+        cta: `DM "SANCTUARY" to explore wellness-integrated luxury estates where serenity is the primary design principle — not a brochure bullet point.`,
+      },
+    ],
+  },
+  {
+    week: 4, theme: 'Mid-Year Close & Forward Momentum',
+    subtitle: 'June 22–30  ·  Close the month strong. Seed exclusive demand for H2 launches.',
+    posts: [
+      {
+        date: 'June 23', day: 'Monday', type: 'Tactical — H2 Positioning', typeColor: C.blueL,
+        hook: '"Half the year is gone. Your real estate position for H2 starts now."',
+        format: 'Single Image · 1:1',
+        visual: `Minimalist composition on a dark marble surface: a single sheet of premium laid paper bearing a hand-drawn timeline — "H1 2025" crossed through with a single ink stroke, "H2 2025" underlined in gold ink. A vintage pen rests beside it. Hard directional lighting from the left creates deep, dramatic shadows. The handwritten quality is essential — avoid digital fonts on the paper itself. Brand watermark bottom-right only.`,
+        caption: `Two things happen every June.\n\n1. Everyone reviews what their capital did in H1.\n2. The most strategic 1% quietly positions for what their capital will do in H2.\n\nPremium gated land in key growth corridors is in a window right now.\nNot because a marketer told you so.\nBecause the data, the infrastructure pipeline, and the supply curve are all converging.\n\nThe announcement of the opportunity always comes after the opportunity.\n\nThe clients who called us in January are now in contract.\nThe ones calling us today are on the waitlist for the next release.\n\n#H2Strategy #MidYearReview #LuxuryInvestment #PremiumPlots #WealthStrategy`,
+        cta: `DM "H2" to speak with a consultant about what premium inventory exists right now — before the next price revision is announced.`,
+      },
+      {
+        date: 'June 25', day: 'Wednesday', type: 'Cinematic — Private Tour', typeColor: C.gold,
+        hook: '"No open houses. No crowds. No pressure. Just you and the property we think was made for you."',
+        format: 'Reel · 9:16 · 45 sec',
+        visual: `A cinematic property walkthrough — not a virtual tour, but a film. Open with an establishing aerial descending into the entrance gate. Follow through a tree-lined private boulevard, across a manicured open lawn, to a premium plot boundary at golden hour. No salesperson, no price board, no banner visible at any point. Just landscape. A single warm voice-over, unhurried: "We never show a property to someone who isn't ready for it. This one — we thought you were." Cinematic score, piano-led. End on logo and DM CTA only.`,
+        caption: `We don't do open houses.\n\nNot because of exclusivity theatre.\nBut because no two clients share the same vision —\nand no property deserves to be shown to someone it wasn't made for.\n\nEvery viewing we facilitate is private.\nPrepared for you. Not broadcast to a crowd.\n\nWe study your brief. We map it to current inventory.\nWe walk you through why this specific plot aligns with your specific life plan.\n\nThat isn't real estate. That's curation.\n\n#PrivateTour #LuxuryRealEstate #ExclusiveListings #BespokeService #CuratedProperty #NextFootstep`,
+        cta: `DM "PRIVATE TOUR" to request a confidential, consultant-guided property viewing experience — arranged around your schedule, not ours.`,
+      },
+      {
+        date: 'June 27', day: 'Friday', type: 'Brand Transparency', typeColor: C.purpleL,
+        hook: '"We don\'t push listings. We build conviction."',
+        format: 'Brand Documentary Reel · 9:16 · 45–60 sec',
+        visual: `A behind-the-brand documentary reel shot verité-style. A consultant at a site visit: reviewing plot maps, walking the boundary perimeter in natural light, making handwritten notes. Intercut with: a meeting room with a client brief being mapped on a whiteboard; a phone call being made with calm authority; aerial confirmation of the actual site. No scripted dialogue — ambient sound and minimal underscoring only. The tone: Bloomberg Originals meets a premium architectural studio. End title card: "Every recommendation we make has already survived a filter you never saw." — Next Footstep.`,
+        caption: `Before we ever show a client a property,\nwe have already said no to dozens.\n\nWe have checked the RERA registration.\nVerified the title chain back three generations.\nWalked the site in monsoon and in dry season.\nMapped every infrastructure development within 10 km.\nModelled the appreciation against five comparable micro-markets.\n\nThe property you see from us is the one in twelve that passed every filter.\n\nThat isn't a service feature. It's our baseline.\n\n#BehindTheBrand #TransparentRealEstate #RealEstateCuration #NextFootstep #PropertyConsultant`,
+        cta: `DM "CONSULT" to speak with a consultant who has already done the due diligence — so you never have to.`,
+      },
+      {
+        date: 'June 30', day: 'Monday', type: 'Month Closer — Forward Look', typeColor: C.gold,
+        hook: '"June ends. Your next chapter begins."',
+        format: 'Cinematic Single Image · 4:5',
+        visual: `Sunset shot over a premium estate landscape — a vast, open gated boundary at the most dramatic moment of golden hour. The horizon is clear, aspirational, endless. In the extreme foreground, barely visible: a stone property marker. The metaphor writes itself — the land stretches forward like unwritten time. No text overlay. Extreme drama in the light. Heavy film grain finish. Logo lock-up only, placed with restraint.`,
+        caption: `Halfway through 2025.\n\nSome of you spent the first six months planning.\nSome researching.\nSome waiting for the right moment.\n\nThe right moment is a story we tell ourselves to avoid deciding.\n\nThe land existed in January.\nIt exists today.\nBy September it will either be 18% more expensive — or it will be sold.\n\nJuly begins tomorrow.\nWhere your next footstep lands is still your choice.\n\n#JuneCloser #MidYear2025 #LuxuryRealEstate #NextFootstep #InvestmentMindset`,
+        cta: `DM "JULY FIRST" to be first on our advance list for the premium inventory being quietly released in Q3 2025. No public announcement. Priority access only.`,
+      },
+    ],
+  },
+];
+
+const SCRIPTS = [
+  {
+    title: 'Beat: The Floor Plan Reel',
+    subtitle: 'Counter: Generic 2D floor plan posts with price stamps',
+    competitor: `Competitor posts a pixelated 2D floor plan with a red "STARTING FROM ₹X LAKHS" stamp and "WhatsApp for Details" text overlaid in Comic Sans-adjacent typography. It looks like a newspaper classified from 2008.`,
+    hook: `"You weren't born to pick a floor plan."`,
+    scenes: [
+      { tc: '0:00–0:03', shot: 'BLACK FRAME', note: 'Silence. Then a single line fades in slow: "You weren\'t born to pick a floor plan."' },
+      { tc: '0:03–0:10', shot: 'Aerial push-in', note: 'Drone descends from open sky into a lush gated estate. No text. Just the land.' },
+      { tc: '0:10–0:18', shot: 'Ground level', note: 'Walking through a private boulevard. Light playing through canopy trees. Unhurried.' },
+      { tc: '0:18–0:25', shot: 'Plot boundary', note: 'Standing at the edge of a premium open plot. 360° slow pan. The horizon is yours.' },
+      { tc: '0:25–0:30', shot: 'End card', note: '"Your land. Your design. Your legacy." — Next Footstep logo. Black background, gold type.' },
+    ],
+    caption: `Others show you floor plans.\nWe show you what you are actually acquiring.\n\n#LuxuryPlots #GatedLiving #PremiumEstate #NextFootstep`,
+  },
+  {
+    title: 'Beat: The "Book Now" CTA',
+    subtitle: 'Counter: Pushy, transactional "Book Now / Scan QR" posts',
+    competitor: `"BOOK NOW! Limited Units! Call: XXXXXXXXXX | Scan QR for Brochure | 40% Complete! Hurry!" — Text-heavy graphic, zero visual identity, urgency as the only strategy.`,
+    hook: `"We never ask you to book. We invite you to discover."`,
+    scenes: [
+      { tc: '0:00–0:05', shot: 'Extreme close-up', note: 'A pair of hands holding a glass of whiskey on a private terrace at dusk. Completely unhurried.' },
+      { tc: '0:05–0:15', shot: 'Slow pull-back', note: 'Reveal: a stunning private estate behind the person. No urgency. No banners. Just space.' },
+      { tc: '0:15–0:22', shot: 'Text card', note: '"We never ask you to book. We invite you to discover." — white on black, clean serif.' },
+      { tc: '0:22–0:28', shot: 'Final wide', note: 'The estate at golden hour. Absolute calm. No price overlays. No CTA graphics.' },
+      { tc: '0:28–0:30', shot: 'End card', note: 'Next Footstep logo. One line: "DM us when you\'re ready." Nothing more.' },
+    ],
+    caption: `The right real estate doesn't need urgency tactics.\nIt needs the right person to find it.\n\n#LuxuryEstate #PremiumProperty #NextFootstep`,
+  },
+  {
+    title: 'Beat: The Price-Focus Post',
+    subtitle: 'Counter: "Starting from ₹X lakhs" pricing-led content',
+    competitor: `Giant "₹45 LAKHS ONWARDS" text stamped over a stock image of a generic white villa. Brand credibility: zero. Perceived value: less than zero.`,
+    hook: `"The question isn't the price. It's the return."`,
+    scenes: [
+      { tc: '0:00–0:04', shot: 'Black + type', note: 'Text fades in: "The question isn\'t the price. It\'s the return." Gold accent on the word "return."' },
+      { tc: '0:04–0:12', shot: 'Cinematic montage', note: 'Premium lifestyle moments: a sunrise over a private estate, a canopy-lined boulevard, a terrace at blue hour.' },
+      { tc: '0:12–0:20', shot: 'Data card', note: 'Elegant gold-on-charcoal typography: "Premium gated land, 2015–2025: +240% average appreciation in key corridors."' },
+      { tc: '0:20–0:28', shot: 'Reflection', note: 'A person seated at a premium terrace, looking out over the landscape. The silence says more than any price tag.' },
+      { tc: '0:28–0:30', shot: 'End card', note: '"Invest in what grows." — Next Footstep logo.' },
+    ],
+    caption: `The price tag fades. The appreciation record doesn't.\n\n#InvestmentProperty #LandAppreciation #PremiumPlots #NextFootstep`,
+  },
+  {
+    title: 'Beat: The Stock Image Aesthetic',
+    subtitle: 'Counter: Generic stock photo real estate accounts',
+    competitor: `Every post uses the same five royalty-free stock images of a white Mediterranean villa with a cloudless blue sky. Zero authenticity. Zero distinctiveness. Indistinguishable from 400 other accounts.`,
+    hook: `"We don't use stock images. Every frame is a property we've personally walked and verified."`,
+    scenes: [
+      { tc: '0:00–0:05', shot: 'Verité footage', note: 'Raw, authentic site footage: a consultant walking a plot at golden hour, making notes on a site map.' },
+      { tc: '0:05–0:12', shot: 'Site details', note: 'Close-ups: a compass on a plot boundary map, hands reviewing elevation drawings, a horizon scan from the plot edge.' },
+      { tc: '0:12–0:20', shot: 'Text card', note: '"We don\'t use stock images. Every frame is land we have personally walked, assessed, and chosen for you."' },
+      { tc: '0:20–0:28', shot: 'Aerial confirm', note: 'Drone shot of the actual site referenced — real, specific, identifiable geography.' },
+      { tc: '0:28–0:30', shot: 'End card', note: 'Next Footstep. "Transparent. Curated. Real." — three words, black background.' },
+    ],
+    caption: `Every frame we publish is a real property we have personally assessed.\nNo stock libraries. No generic villas. No pretence.\n\n#RealEstate #Transparency #NextFootstep #AuthenticContent`,
+  },
+  {
+    title: 'Beat: The "Luxury" Overuse Trap',
+    subtitle: 'Counter: Accounts that say "luxury" 7 times per caption without demonstrating it',
+    competitor: `"Experience the LUXURY of ULTRA-PREMIUM EXCLUSIVE ELITE living at our WORLD-CLASS LUXURY estates!" — 52 hashtags, zero substance, zero visual distinction, maximum cringe.`,
+    hook: `"Luxury isn't a word. It's the 47 things we checked before we called you."`,
+    scenes: [
+      { tc: '0:00–0:04', shot: 'Black. Silence.', note: 'No music. A single word fades in slowly: "Luxury." Held for a beat.' },
+      { tc: '0:04–0:08', shot: 'Hard cut', note: 'Aerial over a lush, manicured private estate. Silence continues. No soundtrack yet.' },
+      { tc: '0:08–0:18', shot: 'Details montage', note: 'Close-ups: a stone pathway at dawn, a private gate closing with a measured click, a consultant\'s measured handshake.' },
+      { tc: '0:18–0:26', shot: 'Text card', note: '"Luxury isn\'t a word. It\'s the 47 things we verified before we called you." — clean white type, black.' },
+      { tc: '0:26–0:30', shot: 'End card', note: 'Next Footstep logo. No tagline. No further justification needed.' },
+    ],
+    caption: `We don't say luxury.\nWe demonstrate it.\n\n#LuxuryEstate #NextFootstep #PremiumReal Estate #EstateLiving`,
+  },
+];
+
+const CTAS = [
+  {
+    category: 'DM Keyword Triggers', color: C.gold, icon: '💬',
+    items: [
+      { kw: '"CURATE"', context: 'Brand introduction / vision content', action: 'Opens a private conversation about their property vision — no sales script, no brochure immediately sent unless they request it.' },
+      { kw: '"Q3" or "H2"', context: 'Investment intelligence / mid-year posts', action: 'Triggers an invitation to a private mid-year market briefing call — positioned as intelligence, not sales.' },
+      { kw: '"GREEN"', context: 'World Environment Day / biophilic content', action: 'Sends a curated list of eco-integrated gated communities where nature is the primary design principle.' },
+      { kw: '"LEGACY"', context: 'Generational wealth / family posts', action: 'Opens conversation about structuring a multi-generational plot acquisition — framed around inheritance planning, not just investment.' },
+      { kw: '"SANCTUARY"', context: 'Yoga Day / wellness / serenity content', action: 'Sends a curated lookbook of wellness-integrated estate communities with private meditation and yoga spaces.' },
+      { kw: '"PRIVATE TOUR"', context: 'Cinematic property / walkthrough posts', action: 'Schedules an exclusive, consultant-led private property viewing — arranged entirely around the client\'s schedule.' },
+      { kw: '"ROI MODEL"', context: 'Educational ROI / data carousel posts', action: 'Triggers delivery of a personalised appreciation projection for their preferred location and investment horizon.' },
+      { kw: '"CONSULT"', context: 'Behind-the-brand / transparency posts', action: 'Books a complimentary 30-minute discovery call. No obligation, no follow-up calls unless explicitly invited.' },
+      { kw: '"JULY FIRST"', context: 'Month closer / forward-looking posts', action: 'Adds them to the advance priority list for Q3 premium inventory — before any public release or announcement.' },
+    ],
+  },
+  {
+    category: 'Instagram Story CTAs', color: C.purpleL, icon: '📱',
+    items: [
+      { kw: 'The Values Poll', context: 'After any lifestyle or investment reel', action: '"What matters more to your next property decision? [A] Wealth Appreciation [B] Lifestyle Quality" — Both answers lead into the same DM sequence, adapted by answer.' },
+      { kw: 'The Open Question Box', context: 'Mid-week story slot, Wednesday or Thursday', action: '"What is your single biggest hesitation about a luxury real estate investment right now?" — Every genuine reply receives a personal, considered response from the team within the same day.' },
+      { kw: 'The Countdown Story', context: '48 hours before any private showcase event', action: '"Private property showcase in 48 hours. 4 slots available. DM INVITE to be placed on the list." — Genuine scarcity without manufactured false urgency.' },
+      { kw: 'The Report Link', context: 'Educational carousel release weeks', action: 'Story with a link sticker reading "Read the full report →" — directs to a premium single-page landing with one action: Request Private Consultation. Never to a generic Linktree.' },
+    ],
+  },
+  {
+    category: 'Caption Sign-Off Templates', color: C.blueL, icon: '✍️',
+    items: [
+      { kw: 'The Private Inquiry', context: 'High-value post standard sign-off', action: '「 DM [KEYWORD] for a private, no-obligation conversation. No brochure spam. No unsolicited follow-up calls. Just a real conversation if you want one. 」' },
+      { kw: 'The Save Trigger', context: 'Educational / data carousel posts', action: '"Save this post. The information in slides 4 and 5 alone will permanently change how you evaluate your next real estate decision."' },
+      { kw: 'The Capacity Signal', context: 'Brand positioning and trust-building posts', action: '"We work with a deliberately limited number of clients each quarter. Not by accident — by design. DM us if you would like to understand why that matters."' },
+      { kw: 'The Anti-Pitch', context: 'When building brand trust before any transaction signal', action: '"We are not going to ask you to act fast, scan a QR code, or book a site visit today. We are going to show you something worth your attention. That is all."' },
+    ],
+  },
+  {
+    category: 'Bio Optimisation', color: C.warmL, icon: '🔗',
+    items: [
+      { kw: 'Line 1 — Value', context: 'Primary identifier', action: 'Luxury real estate curation for HNI investors' },
+      { kw: 'Line 2 — Differentiator', context: 'What sets you apart', action: 'Premium gated plots · Private consultations' },
+      { kw: 'Line 3 — CTA', context: 'The single action you want', action: '↓ DM "CONSULT" to begin' },
+      { kw: 'Link in Bio', context: 'Destination strategy', action: 'A premium single-page landing: short brand film (45s), two lines of copy, one button — "Request a Private Consultation." Not a Linktree. Not a brochure download. A curated experience.' },
+    ],
+  },
+];
+
+// ─── HELPER COMPONENTS ──────────────────────────────────────────────────────
+
+const Tag = ({ label, color }) => (
+  <span style={{ display:'inline-flex', alignItems:'center', padding:'2px 10px', borderRadius:'2px', fontSize:'10px', fontWeight:'600', letterSpacing:'0.08em', textTransform:'uppercase', color, border:`1px solid ${color}44`, background:`${color}12` }}>
+    {label}
+  </span>
+);
+
+const CopyBtn = ({ text, id, copied, onCopy }) => (
+  <button
+    onClick={() => onCopy(text, id)}
+    style={{ background: copied === id ? C.gold+'22':'transparent', border:`1px solid ${copied===id?C.gold:C.border2}`, borderRadius:'2px', color: copied===id?C.gold:C.muted, fontSize:'11px', padding:'3px 10px', cursor:'pointer', whiteSpace:'nowrap', flexShrink:0, transition:'all 0.2s', fontFamily:"'Inter',sans-serif" }}
+  >
+    {copied === id ? '✓ Copied' : 'Copy'}
+  </button>
+);
+
+const SectionLabel = ({ text, color }) => (
+  <p style={{ fontSize:'10px', textTransform:'uppercase', letterSpacing:'0.15em', color: color||C.gold, marginBottom:'10px', fontWeight:'600' }}>
+    {text}
+  </p>
+);
+
+const InfoBlock = ({ children, color }) => (
+  <div style={{ background:C.surface, borderRadius:'3px', padding:'14px', borderLeft:`2px solid ${(color||C.gold)+'44'}` }}>
+    {children}
+  </div>
+);
+
+// ─── TAB 1: STRATEGIC BREAKDOWN ─────────────────────────────────────────────
+
+const StrategicBreakdown = () => {
+  const [openPersona, setOpenPersona] = useState(null);
+
+  return (
+    <div className="fade-in" style={{ maxWidth:'920px', margin:'0 auto' }}>
+
+      {/* Hero */}
+      <div style={{ marginBottom:'48px' }}>
+        <p style={{ color:C.gold, fontSize:'11px', letterSpacing:'0.2em', textTransform:'uppercase', marginBottom:'8px' }}>June 2025 Strategy</p>
+        <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'42px', fontWeight:'300', color:C.white, lineHeight:'1.15', marginBottom:'14px' }}>
+          Strategic Framework
+        </h2>
+        <p style={{ color:C.muted2, fontSize:'14px', maxWidth:'580px', lineHeight:'1.7' }}>
+          A precision content strategy engineered for HNWI acquisition, brand authority, and aspirational positioning in the luxury real estate vertical.
+        </p>
+      </div>
+
+      {/* Content Pillars */}
+      <div style={{ marginBottom:'52px' }}>
+        <h3 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'24px', fontWeight:'400', color:C.white, marginBottom:'6px' }}>The Four Content Pillars</h3>
+        <p style={{ color:C.muted, fontSize:'12px', marginBottom:'24px' }}>Every post maps to one of these strategic pillars. Balance is intentional — no pillar dominates.</p>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:'16px' }}>
+          {PILLARS.map((p,i) => (
+            <div key={i} style={{ background:C.card, border:`1px solid ${C.border}`, borderTop:`2px solid ${p.color}`, borderRadius:'4px', padding:'24px' }}>
+              <div style={{ fontSize:'22px', marginBottom:'12px', color:p.color }}>{p.icon}</div>
+              <h4 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'20px', color:p.color, fontWeight:'500', marginBottom:'8px' }}>{p.title}</h4>
+              <p style={{ fontSize:'13px', color:C.muted2, lineHeight:'1.65', marginBottom:'18px' }}>{p.desc}</p>
+              <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
+                <span style={{ fontSize:'11px', color:p.color, border:`1px solid ${p.color}33`, padding:'2px 8px', borderRadius:'2px', background:`${p.color}0A` }}>{p.freq}</span>
+                {p.formats.map((f,j) => (
+                  <span key={j} style={{ fontSize:'11px', color:C.muted, border:`1px solid ${C.border2}`, padding:'2px 8px', borderRadius:'2px' }}>{f}</span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Personas */}
+      <div style={{ marginBottom:'52px' }}>
+        <h3 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'24px', fontWeight:'400', color:C.white, marginBottom:'6px' }}>Target Audience Personas</h3>
+        <p style={{ color:C.muted, fontSize:'12px', marginBottom:'24px' }}>Know exactly who you are speaking to — and what they need to hear before they act.</p>
+        <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+          {PERSONAS.map((a,i) => (
+            <div key={i} onClick={() => setOpenPersona(openPersona===i?null:i)}
+              style={{ background:C.card, border:`1px solid ${openPersona===i?C.gold+'44':C.border}`, borderRadius:'4px', padding:'16px 20px', cursor:'pointer', transition:'border-color 0.2s' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <div>
+                  <span style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'18px', color:openPersona===i?C.gold:C.white }}>{a.title}</span>
+                  <span style={{ color:C.muted, fontSize:'12px', marginLeft:'14px' }}>Age {a.age} · {a.income}</span>
+                </div>
+                <span style={{ color:C.gold, fontSize:'20px', fontWeight:'300', lineHeight:1 }}>{openPersona===i?'−':'+'}</span>
+              </div>
+              {openPersona===i && (
+                <div style={{ marginTop:'16px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px' }}>
+                  <div style={{ background:C.surface, padding:'12px 14px', borderRadius:'3px' }}>
+                    <p style={{ fontSize:'10px', color:C.muted, textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'6px' }}>Core Pain Point</p>
+                    <p style={{ fontSize:'13px', color:C.white, lineHeight:'1.5' }}>{a.pain}</p>
+                  </div>
+                  <div style={{ background:C.surface, padding:'12px 14px', borderRadius:'3px' }}>
+                    <p style={{ fontSize:'10px', color:C.muted, textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'6px' }}>What They Desire</p>
+                    <p style={{ fontSize:'13px', color:C.white, lineHeight:'1.5' }}>{a.desire}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Schedule */}
+      <div style={{ marginBottom:'52px' }}>
+        <h3 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'24px', fontWeight:'400', color:C.white, marginBottom:'6px' }}>Optimal Posting Schedule</h3>
+        <p style={{ color:C.muted, fontSize:'12px', marginBottom:'24px' }}>Engineered for peak HNWI audience attention windows — not generic social media best-practice templates.</p>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'14px' }}>
+          {SCHEDULE.map((s,i) => (
+            <div key={i} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:'4px', padding:'22px 16px', textAlign:'center' }}>
+              <div style={{ fontSize:'20px', marginBottom:'10px', color:C.gold }}>{s.icon}</div>
+              <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'20px', color:C.gold, marginBottom:'4px' }}>{s.day}</p>
+              <p style={{ fontSize:'14px', color:C.white, marginBottom:'6px', fontWeight:'500' }}>{s.time}</p>
+              <p style={{ fontSize:'11px', color:C.muted, lineHeight:'1.4' }}>{s.type}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Competitive Gap */}
+      <div>
+        <h3 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'24px', fontWeight:'400', color:C.white, marginBottom:'6px' }}>The Competitive Gap</h3>
+        <p style={{ color:C.muted, fontSize:'12px', marginBottom:'24px' }}>What the market does vs. what Next Footstep does. The contrast is the strategy.</p>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px' }}>
+          <div style={{ background:'#160A0A', border:'1px solid #3A1E1E', borderRadius:'4px', padding:'24px' }}>
+            <p style={{ fontSize:'11px', textTransform:'uppercase', letterSpacing:'0.15em', color:'#9A4A4A', marginBottom:'18px', fontWeight:'600' }}>Generic Competitors</p>
+            {['Stock villa images with cloudless blue skies','Price-first messaging ("Starting ₹45L")','Book Now / Scan QR Code CTAs','Heavy text overlays obscuring the visual','2D floor plans as the hero content','52 hashtags, zero thought leadership','Zero authentic brand voice or perspective'].map((item,i) => (
+              <div key={i} style={{ display:'flex', gap:'10px', marginBottom:'10px', alignItems:'flex-start' }}>
+                <span style={{ color:'#9A4A4A', fontSize:'13px', marginTop:'2px' }}>✕</span>
+                <p style={{ fontSize:'13px', color:'#7A6A6A', lineHeight:'1.5' }}>{item}</p>
+              </div>
+            ))}
+          </div>
+          <div style={{ background:'#0A160A', border:`1px solid #1E3A1E`, borderRadius:'4px', padding:'24px' }}>
+            <p style={{ fontSize:'11px', textTransform:'uppercase', letterSpacing:'0.15em', color:C.greenL, marginBottom:'18px', fontWeight:'600' }}>Next Footstep</p>
+            {['Cinematic, original-production visual content','Value-led, lifestyle-first messaging always','Private DM-based inquiry flow — no open forms','Clean, uncluttered visuals: the land speaks','Emotional storytelling and heritage narratives','Strategic, targeted hashtag sets (max 12)','Consistent, authoritative thought leadership'].map((item,i) => (
+              <div key={i} style={{ display:'flex', gap:'10px', marginBottom:'10px', alignItems:'flex-start' }}>
+                <span style={{ color:C.greenL, fontSize:'13px', marginTop:'2px' }}>✓</span>
+                <p style={{ fontSize:'13px', color:C.muted2, lineHeight:'1.5' }}>{item}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+    </div>
+  );
+};
+
+// ─── TAB 2: WEEKLY CALENDAR ──────────────────────────────────────────────────
+
+const WeeklyCalendar = () => {
+  const [openWeek, setOpenWeek] = useState(0);
+  const [openPost, setOpenPost] = useState(null);
+  const [copied, setCopied] = useState(null);
+
+  const handleCopy = (text, id) => {
+    try { navigator.clipboard.writeText(text).then(() => { setCopied(id); setTimeout(()=>setCopied(null),2000); }); }
+    catch(e) { setCopied(id); setTimeout(()=>setCopied(null),2000); }
+  };
+
+  return (
+    <div className="fade-in" style={{ maxWidth:'920px', margin:'0 auto' }}>
+      <div style={{ marginBottom:'48px' }}>
+        <p style={{ color:C.gold, fontSize:'11px', letterSpacing:'0.2em', textTransform:'uppercase', marginBottom:'8px' }}>16 Posts · 4 Weeks · June 2025</p>
+        <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'42px', fontWeight:'300', color:C.white, lineHeight:'1.15' }}>Content Calendar</h2>
+        <p style={{ color:C.muted2, marginTop:'12px', fontSize:'14px' }}>Click any week to expand. Click any post to reveal the full brief, caption, and CTA.</p>
+      </div>
+
+      {CALENDAR.map((week, wi) => (
+        <div key={wi} style={{ marginBottom:'16px' }}>
+          {/* Week Header */}
+          <div onClick={() => { setOpenWeek(openWeek===wi?null:wi); setOpenPost(null); }}
+            style={{ background: openWeek===wi?C.card:C.surface, border:`1px solid ${openWeek===wi?C.gold+'44':C.border}`, borderRadius:'4px', padding:'18px 24px', cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center', transition:'all 0.2s' }}>
+            <div>
+              <div style={{ display:'flex', alignItems:'center', gap:'14px', marginBottom:'4px' }}>
+                <span style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'22px', color:openWeek===wi?C.gold:C.white }}>
+                  Week {week.week} — {week.theme}
+                </span>
+                <span style={{ fontSize:'11px', color:C.muted, border:`1px solid ${C.border2}`, padding:'2px 8px', borderRadius:'2px' }}>{week.posts.length} posts</span>
+              </div>
+              <p style={{ fontSize:'12px', color:C.muted }}>{week.subtitle}</p>
+            </div>
+            <span style={{ color:C.gold, fontSize:'22px', fontWeight:'300', lineHeight:1, flexShrink:0, marginLeft:'16px' }}>{openWeek===wi?'−':'+'}</span>
+          </div>
+
+          {/* Posts */}
+          {openWeek===wi && (
+            <div style={{ paddingTop:'10px', display:'flex', flexDirection:'column', gap:'10px' }}>
+              {week.posts.map((post, pi) => {
+                const pid = `${wi}-${pi}`;
+                const isOpen = openPost===pid;
+                return (
+                  <div key={pi} style={{ background:C.card, border:`1px solid ${isOpen?post.typeColor+'33':C.border}`, borderLeft:`3px solid ${post.typeColor}`, borderRadius:'4px', overflow:'hidden' }}>
+
+                    {/* Post Summary Row */}
+                    <div onClick={() => setOpenPost(isOpen?null:pid)}
+                      style={{ padding:'15px 20px', cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+                      <div style={{ flex:1 }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'6px', flexWrap:'wrap' }}>
+                          <span style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'18px', color:C.gold, fontWeight:'500' }}>{post.date}</span>
+                          <span style={{ fontSize:'12px', color:C.muted }}>{post.day}</span>
+                          {post.special && (
+                            <span style={{ fontSize:'11px', color:post.typeColor, background:`${post.typeColor}15`, padding:'2px 8px', borderRadius:'2px', border:`1px solid ${post.typeColor}33` }}>{post.special}</span>
+                          )}
+                          <Tag label={post.type} color={post.typeColor} />
+                        </div>
+                        <p style={{ fontSize:'14px', color:C.white, fontStyle:'italic', fontFamily:"'Cormorant Garamond',serif", lineHeight:'1.4' }}>{post.hook}</p>
+                        <p style={{ fontSize:'11px', color:C.muted, marginTop:'4px' }}>{post.format}</p>
+                      </div>
+                      <span style={{ color:C.gold, fontSize:'20px', fontWeight:'300', marginLeft:'16px', flexShrink:0, lineHeight:1 }}>{isOpen?'−':'+'}</span>
+                    </div>
+
+                    {/* Post Detail */}
+                    {isOpen && (
+                      <div style={{ padding:'0 20px 22px', borderTop:`1px solid ${C.border}` }}>
+
+                        <div style={{ marginTop:'20px' }}>
+                          <SectionLabel text="🎥  Visual Brief" color={post.typeColor} />
+                          <InfoBlock color={post.typeColor}>
+                            <p style={{ fontSize:'13px', color:C.muted2, lineHeight:'1.75' }}>{post.visual}</p>
+                          </InfoBlock>
+                        </div>
+
+                        <div style={{ marginTop:'18px' }}>
+                          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'10px' }}>
+                            <SectionLabel text="✍️  Caption Copy" color={post.typeColor} />
+                            <CopyBtn text={post.caption} id={pid+'-cap'} copied={copied} onCopy={handleCopy} />
+                          </div>
+                          <InfoBlock color={post.typeColor}>
+                            <p style={{ fontSize:'13px', color:C.muted2, lineHeight:'1.85', whiteSpace:'pre-line' }}>{post.caption}</p>
+                          </InfoBlock>
+                        </div>
+
+                        <div style={{ marginTop:'18px' }}>
+                          <SectionLabel text="🎯  Engagement CTA" color={post.typeColor} />
+                          <div style={{ background:`${post.typeColor}0E`, border:`1px solid ${post.typeColor}33`, borderRadius:'3px', padding:'14px 16px', display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:'12px' }}>
+                            <p style={{ fontSize:'13px', color:C.white, lineHeight:'1.65' }}>{post.cta}</p>
+                            <CopyBtn text={post.cta} id={pid+'-cta'} copied={copied} onCopy={handleCopy} />
+                          </div>
+                        </div>
+
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// ─── TAB 3: COMPETITOR SCRIPTS ───────────────────────────────────────────────
+
+const CompetitorScripts = () => {
+  const [open, setOpen] = useState(0);
+  const [copied, setCopied] = useState(null);
+
+  const handleCopy = (text, id) => {
+    try { navigator.clipboard.writeText(text).then(() => { setCopied(id); setTimeout(()=>setCopied(null),2000); }); }
+    catch(e) { setCopied(id); setTimeout(()=>setCopied(null),2000); }
+  };
+
+  return (
+    <div className="fade-in" style={{ maxWidth:'920px', margin:'0 auto' }}>
+      <div style={{ marginBottom:'48px' }}>
+        <p style={{ color:C.gold, fontSize:'11px', letterSpacing:'0.2em', textTransform:'uppercase', marginBottom:'8px' }}>5 Reel Scripts</p>
+        <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'42px', fontWeight:'300', color:C.white, lineHeight:'1.15' }}>Competitor Beat Scripts</h2>
+        <p style={{ color:C.muted2, marginTop:'12px', fontSize:'14px', maxWidth:'600px', lineHeight:'1.7' }}>
+          Reel concepts engineered to directly outclass generic competitor content through contrast, cinematic execution, and brand authority. Each script shows the competitor pattern — then destroys it.
+        </p>
+      </div>
+
+      {SCRIPTS.map((s, si) => (
+        <div key={si} style={{ marginBottom:'16px', background:C.card, border:`1px solid ${open===si?C.gold+'44':C.border}`, borderRadius:'4px', overflow:'hidden' }}>
+
+          <div onClick={() => setOpen(open===si?null:si)}
+            style={{ padding:'20px 24px', cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+            <div>
+              <h4 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'21px', color:open===si?C.gold:C.white, marginBottom:'4px' }}>{s.title}</h4>
+              <p style={{ fontSize:'12px', color:C.muted }}>{s.subtitle}</p>
+            </div>
+            <span style={{ color:C.gold, fontSize:'22px', fontWeight:'300', marginLeft:'16px', flexShrink:0, lineHeight:1 }}>{open===si?'−':'+'}</span>
+          </div>
+
+          {open===si && (
+            <div style={{ padding:'0 24px 24px', borderTop:`1px solid ${C.border}` }}>
+
+              {/* Competitor pattern */}
+              <div style={{ marginTop:'20px', background:'#180A0A', border:'1px solid #3A1E1E', borderRadius:'3px', padding:'14px 16px' }}>
+                <p style={{ fontSize:'10px', textTransform:'uppercase', letterSpacing:'0.15em', color:'#9A4A4A', marginBottom:'8px', fontWeight:'600' }}>What Competitors Do</p>
+                <p style={{ fontSize:'13px', color:'#7A6060', lineHeight:'1.65', fontStyle:'italic' }}>{s.competitor}</p>
+              </div>
+
+              {/* Hook */}
+              <div style={{ marginTop:'18px' }}>
+                <SectionLabel text="🎣  Opening Hook" color={C.gold} />
+                <div style={{ background:C.gold+'0E', border:`1px solid ${C.gold}33`, borderRadius:'3px', padding:'14px 16px' }}>
+                  <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'20px', color:C.white, fontStyle:'italic', lineHeight:'1.4' }}>{s.hook}</p>
+                </div>
+              </div>
+
+              {/* Reel Script */}
+              <div style={{ marginTop:'18px' }}>
+                <SectionLabel text="🎬  Reel Script — Scene by Scene" color={C.gold} />
+                <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
+                  {s.scenes.map((scene, sci) => (
+                    <div key={sci} style={{ display:'grid', gridTemplateColumns:'90px 130px 1fr', gap:'12px', alignItems:'start', background:C.surface, borderRadius:'3px', padding:'10px 14px' }}>
+                      <span style={{ fontSize:'11px', color:C.gold, fontFamily:'monospace', paddingTop:'1px' }}>{scene.tc}</span>
+                      <span style={{ fontSize:'12px', color:C.white, fontWeight:'500', lineHeight:'1.4' }}>{scene.shot}</span>
+                      <span style={{ fontSize:'12px', color:C.muted2, lineHeight:'1.55' }}>{scene.note}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Caption */}
+              <div style={{ marginTop:'18px' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'10px' }}>
+                  <SectionLabel text="✍️  Caption Direction" color={C.gold} />
+                  <CopyBtn text={s.caption} id={`s-${si}`} copied={copied} onCopy={handleCopy} />
+                </div>
+                <InfoBlock color={C.gold}>
+                  <p style={{ fontSize:'14px', color:C.white, fontStyle:'italic', fontFamily:"'Cormorant Garamond',serif", lineHeight:'1.65', whiteSpace:'pre-line' }}>{s.caption}</p>
+                </InfoBlock>
+              </div>
+
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// ─── TAB 4: LEAD-GEN CTAs ────────────────────────────────────────────────────
+
+const LeadGenCTAs = () => {
+  const [copied, setCopied] = useState(null);
+
+  const handleCopy = (text, id) => {
+    try { navigator.clipboard.writeText(text).then(() => { setCopied(id); setTimeout(()=>setCopied(null),2000); }); }
+    catch(e) { setCopied(id); setTimeout(()=>setCopied(null),2000); }
+  };
+
+  return (
+    <div className="fade-in" style={{ maxWidth:'920px', margin:'0 auto' }}>
+      <div style={{ marginBottom:'48px' }}>
+        <p style={{ color:C.gold, fontSize:'11px', letterSpacing:'0.2em', textTransform:'uppercase', marginBottom:'8px' }}>Private Inquiry Architecture</p>
+        <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'42px', fontWeight:'300', color:C.white, lineHeight:'1.15' }}>Lead-Gen CTA Snippets</h2>
+        <p style={{ color:C.muted2, marginTop:'12px', fontSize:'14px', maxWidth:'600px', lineHeight:'1.7' }}>
+          A complete DM-first lead generation system designed to attract HNWI inquiries — without a single "Book Now," "Limited Offer," or "Scan QR Code" in sight.
+        </p>
+      </div>
+
+      {CTAS.map((section, si) => (
+        <div key={si} style={{ marginBottom:'44px' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:'14px', marginBottom:'20px' }}>
+            <span style={{ fontSize:'22px' }}>{section.icon}</span>
+            <h3 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'24px', color:section.color, fontWeight:'400' }}>{section.category}</h3>
+          </div>
+
+          <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
+            {section.items.map((item, ii) => (
+              <div key={ii} style={{ background:C.card, border:`1px solid ${C.border}`, borderLeft:`3px solid ${section.color}55`, borderRadius:'4px', padding:'16px 20px' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:'12px' }}>
+                  <div style={{ flex:1 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'8px', flexWrap:'wrap' }}>
+                      <span style={{ fontFamily:'monospace', fontSize:'13px', color:section.color, background:`${section.color}15`, padding:'3px 10px', borderRadius:'2px', fontWeight:'600' }}>{item.kw}</span>
+                      <span style={{ fontSize:'11px', color:C.muted }}>{item.context}</span>
+                    </div>
+                    <p style={{ fontSize:'13px', color:C.muted2, lineHeight:'1.65' }}>{item.action}</p>
+                  </div>
+                  <CopyBtn text={item.action} id={`cta-${si}-${ii}`} copied={copied} onCopy={handleCopy} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {si < CTAS.length-1 && <div style={{ height:'1px', background:C.border, marginTop:'36px' }} />}
+        </div>
+      ))}
+
+      {/* Philosophy Block */}
+      <div style={{ background:'linear-gradient(135deg,#141000 0%,#141414 100%)', border:`1px solid ${C.gold}33`, borderRadius:'6px', padding:'36px 32px', marginTop:'8px' }}>
+        <p style={{ fontSize:'11px', textTransform:'uppercase', letterSpacing:'0.2em', color:C.gold, marginBottom:'14px', fontWeight:'600' }}>Core Philosophy</p>
+        <h3 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'28px', fontWeight:'300', color:C.white, marginBottom:'18px', lineHeight:'1.25' }}>
+          The Anti-Pitch Principle
+        </h3>
+        <p style={{ fontSize:'14px', color:C.muted2, lineHeight:'1.85', maxWidth:'680px' }}>
+          Every CTA in this system is built around one truth: <span style={{ color:C.white }}>HNWIs are repelled by urgency and drawn to exclusivity.</span>
+          <br /><br />
+          We never push. We invite. We never broadcast. We whisper. The DM keyword trigger system creates a self-selecting funnel where only genuinely interested individuals raise their hand — resulting in higher conversion rates, zero time wasted on cold leads, and a brand perception that never cheapens under pressure.
+          <br /><br />
+          <span style={{ color:C.gold, fontStyle:'italic', fontFamily:"'Cormorant Garamond',serif", fontSize:'17px' }}>
+            "The most exclusive brands in the world never chase. They create conditions where the right people want to arrive."
+          </span>
+        </p>
+      </div>
+
+    </div>
+  );
+};
+
+// ─── APP SHELL ───────────────────────────────────────────────────────────────
+
+const TABS = [
+  { id:'strategy', label:'Strategic Breakdown', icon:'⬡' },
+  { id:'calendar', label:'Weekly Calendar', icon:'◈' },
+  { id:'scripts',  label:'Competitor Beat Scripts', icon:'▶' },
+  { id:'ctas',     label:'Lead-Gen CTAs', icon:'◎' },
+];
+
+const App = () => {
+  const [active, setActive] = useState('strategy');
+
+  const content = {
+    strategy: <StrategicBreakdown />,
+    calendar: <WeeklyCalendar />,
+    scripts:  <CompetitorScripts />,
+    ctas:     <LeadGenCTAs />,
+  };
+
+  return (
+    <div style={{ minHeight:'100vh', background:C.bg }}>
+
+      {/* Top Header */}
+      <div style={{ background:C.bg2, borderBottom:`1px solid ${C.border}`, position:'sticky', top:0, zIndex:100 }}>
+        <div style={{ maxWidth:'1200px', margin:'0 auto', padding:'0 40px' }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', height:'58px' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'14px' }}>
+              <span style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'20px', fontWeight:'600', color:C.gold, letterSpacing:'0.1em' }}>
+                NEXT FOOTSTEP
+              </span>
+              <span style={{ width:'1px', height:'14px', background:C.border2 }} />
+              <span style={{ fontSize:'12px', color:C.muted, letterSpacing:'0.06em' }}>Social Media Director</span>
+            </div>
+            <div style={{ display:'flex', gap:'8px', alignItems:'center' }}>
+              <span style={{ fontSize:'11px', color:C.muted, background:C.card, border:`1px solid ${C.border}`, padding:'4px 12px', borderRadius:'2px', letterSpacing:'0.06em' }}>
+                June 2025
+              </span>
+              <span style={{ fontSize:'11px', color:C.gold, background:C.gold+'11', border:`1px solid ${C.gold}33`, padding:'4px 12px', borderRadius:'2px', letterSpacing:'0.06em' }}>
+                16 Posts Planned
+              </span>
+            </div>
+          </div>
+
+          {/* Tab Nav */}
+          <div style={{ display:'flex', gap:'0', overflowX:'auto' }}>
+            {TABS.map(tab => (
+              <button key={tab.id} onClick={() => setActive(tab.id)}
+                style={{ background:'transparent', border:'none', borderBottom: active===tab.id?`2px solid ${C.gold}`:'2px solid transparent', padding:'14px 18px', color: active===tab.id?C.gold:C.muted, fontSize:'13px', fontWeight: active===tab.id?'500':'400', cursor:'pointer', letterSpacing:'0.03em', display:'flex', alignItems:'center', gap:'7px', transition:'all 0.2s', fontFamily:"'Inter',sans-serif", whiteSpace:'nowrap', flexShrink:0 }}>
+                <span style={{ fontSize:'13px' }}>{tab.icon}</span>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Page Content */}
+      <div style={{ padding:'48px 40px 80px', maxWidth:'1200px', margin:'0 auto' }}>
+        {content[active]}
+      </div>
+
+      {/* Footer */}
+      <div style={{ borderTop:`1px solid ${C.border}`, padding:'18px 40px', textAlign:'center' }}>
+        <p style={{ fontSize:'11px', color:C.muted, letterSpacing:'0.12em' }}>
+          NEXT FOOTSTEP · JUNE 2025 SOCIAL MEDIA STRATEGY · LUXURY REAL ESTATE HNWI ACQUISITION
+        </p>
+      </div>
+
+    </div>
+  );
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
