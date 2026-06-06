@@ -1,0 +1,1380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WebFlow OS v0.26 — Webfluence Command Web</title>
+<style>
+:root{
+  --bg:#f6f7f9;--surface:#ffffff;--surface2:#f2f3f6;--border:#e5e7ec;
+  --text:#16181d;--muted:#6b7280;--brand:#f5b50c;--brand-text:#a9760a;
+  --success:#15a06a;--warning:#b9770f;--danger:#d83a3a;--info:#2f74d0;
+  --radius:10px;--sidebar:230px;--header:54px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+a{color:var(--brand-text);text-decoration:none}
+button{cursor:pointer;font-family:inherit;font-size:13px}
+input,select,textarea{font-family:inherit;font-size:13px}
+
+/* ─── Layout ─── */
+#app{display:grid;grid-template-columns:var(--sidebar) 1fr;grid-template-rows:var(--header) 1fr;height:100vh;overflow:hidden}
+#topbar{grid-column:1/-1;grid-row:1;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;padding:0 18px;position:sticky;top:0;z-index:100}
+#topbar .logo{font-weight:700;font-size:16px;letter-spacing:-.3px;color:var(--text)}
+#topbar .logo span{color:var(--brand-text)}
+#topbar .version{font-size:11px;color:var(--muted);margin-left:2px}
+#topbar .spacer{flex:1}
+#ai-pill{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 12px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+#ai-pill .dot{width:7px;height:7px;border-radius:50%;background:var(--success)}
+.user-pill{background:var(--brand);color:#0a0a0c;border-radius:20px;padding:3px 12px;font-size:12px;font-weight:600}
+
+#sidebar{grid-column:1;grid-row:2;background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;padding:12px 0}
+.nav-group{margin-bottom:4px}
+.nav-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;padding:8px 18px 4px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:7px 18px;color:var(--muted);cursor:pointer;border-left:3px solid transparent;transition:all .15s;font-size:13px}
+.nav-item:hover{background:var(--bg);color:var(--text)}
+.nav-item.active{background:linear-gradient(90deg,rgba(245,181,12,.1) 0%,transparent 100%);border-left-color:var(--brand);color:var(--brand-text);font-weight:600}
+.nav-icon{width:16px;text-align:center;flex-shrink:0}
+
+#view{grid-column:2;grid-row:2;overflow-y:auto;padding:22px 24px}
+
+/* ─── Cards & Stats ─── */
+.page-title{font-size:20px;font-weight:700;margin-bottom:4px}
+.page-sub{color:var(--muted);font-size:13px;margin-bottom:20px}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:12px;margin-bottom:22px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
+.stat-card .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.stat-card .val{font-size:22px;font-weight:700;color:var(--text)}
+.stat-card .sub{font-size:11px;color:var(--muted);margin-top:2px}
+.stat-card .val.green{color:var(--success)}
+.stat-card .val.amber{color:var(--warning)}
+.stat-card .val.red{color:var(--danger)}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:16px}
+.card-title{font-weight:600;font-size:14px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card-title .ct-badge{font-size:11px;font-weight:500;background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:20px;padding:1px 8px}
+
+/* ─── Tables ─── */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:7px 12px;border-bottom:1px solid var(--border)}
+td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle;font-size:13px}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg)}
+
+/* ─── Tags & Badges ─── */
+.tag{display:inline-block;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:600}
+.tag-green{background:rgba(21,160,106,.12);color:var(--success)}
+.tag-amber{background:rgba(185,119,15,.12);color:var(--warning)}
+.tag-red{background:rgba(216,58,58,.12);color:var(--danger)}
+.tag-blue{background:rgba(47,116,208,.12);color:var(--info)}
+.tag-muted{background:var(--surface2);color:var(--muted)}
+.tag-brand{background:rgba(245,181,12,.18);color:var(--brand-text)}
+
+/* ─── Buttons ─── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-weight:500;transition:all .15s}
+.btn:hover{background:var(--bg)}
+.btn-brand{background:var(--brand);border-color:var(--brand);color:#0a0a0c;font-weight:600}
+.btn-brand:hover{background:#e0a40b}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-danger{background:rgba(216,58,58,.08);border-color:rgba(216,58,58,.3);color:var(--danger)}
+.btn-success{background:rgba(21,160,106,.08);border-color:rgba(21,160,106,.3);color:var(--success)}
+
+/* ─── Health bar ─── */
+.health-bar{display:flex;align-items:center;gap:8px}
+.hb-track{flex:1;height:5px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.hb-fill{height:100%;border-radius:3px}
+
+/* ─── SVG Bar Chart ─── */
+.bar-chart{width:100%;overflow:visible}
+
+/* ─── Kanban ─── */
+.kanban{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:start}
+.kanban-col{background:var(--surface2);border-radius:var(--radius);padding:10px}
+.kanban-col-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.kanban-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:box-shadow .15s}
+.kanban-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.kanban-card .kc-title{font-size:13px;font-weight:600;margin-bottom:4px}
+.kanban-card .kc-meta{font-size:11px;color:var(--muted)}
+
+/* ─── Calendar ─── */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-day-hdr{text-align:center;font-size:11px;font-weight:600;color:var(--muted);padding:4px 0}
+.cal-day{min-height:76px;background:var(--surface2);border-radius:6px;padding:4px;position:relative}
+.cal-day.today{background:rgba(245,181,12,.12);border:1px solid var(--brand)}
+.cal-day.other-month{opacity:.4}
+.cal-day .day-num{font-size:11px;color:var(--muted);font-weight:600;margin-bottom:2px}
+.cal-post{border-radius:4px;padding:2px 5px;font-size:10px;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.cal-post.meta{background:rgba(47,116,208,.15);color:var(--info)}
+.cal-post.ig{background:rgba(185,119,15,.15);color:var(--warning)}
+.cal-post.li{background:rgba(21,160,106,.15);color:var(--success)}
+.cal-post.yt{background:rgba(216,58,58,.15);color:var(--danger)}
+
+/* ─── Timeline ─── */
+.timeline{position:relative;padding-left:28px}
+.timeline::before{content:'';position:absolute;left:9px;top:0;bottom:0;width:2px;background:var(--border)}
+.tl-item{position:relative;margin-bottom:18px}
+.tl-dot{position:absolute;left:-22px;top:3px;width:10px;height:10px;border-radius:50%;background:var(--brand);border:2px solid var(--surface)}
+.tl-year{font-size:11px;font-weight:700;color:var(--brand-text);margin-bottom:2px}
+.tl-text{font-size:13px;color:var(--text)}
+
+/* ─── Modal ─── */
+#modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center}
+#modal-overlay.open{display:flex}
+#modal-box{background:var(--surface);border-radius:12px;max-width:660px;width:95%;max-height:88vh;overflow-y:auto;padding:24px;position:relative;box-shadow:0 8px 40px rgba(0,0,0,.18)}
+#modal-close{position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;color:var(--muted);cursor:pointer;padding:2px 6px}
+#modal-close:hover{color:var(--text)}
+
+/* ─── Alerts ─── */
+.alert{display:flex;align-items:flex-start;gap:10px;padding:11px 14px;border-radius:8px;margin-bottom:8px;font-size:13px}
+.alert-danger{background:rgba(216,58,58,.08);border:1px solid rgba(216,58,58,.2);color:#8f1a1a}
+.alert-warning{background:rgba(185,119,15,.08);border:1px solid rgba(185,119,15,.2);color:#7a4f00}
+.alert-info{background:rgba(47,116,208,.08);border:1px solid rgba(47,116,208,.2);color:#0e3d80}
+.alert-success{background:rgba(21,160,106,.08);border:1px solid rgba(21,160,106,.2);color:#0a5a38}
+
+/* ─── Form ─── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form-field{display:flex;flex-direction:column;gap:4px}
+.form-field label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-field input,.form-field select,.form-field textarea{border:1px solid var(--border);border-radius:6px;padding:7px 10px;background:var(--surface);outline:none;transition:border .15s}
+.form-field input:focus,.form-field select:focus,.form-field textarea:focus{border-color:var(--brand)}
+.form-full{grid-column:1/-1}
+
+/* ─── Progress ─── */
+.score-ring{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;font-size:12px;font-weight:700}
+
+/* ─── Misc ─── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.flex{display:flex;align-items:center;gap:8px}
+.flex-between{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.mt-16{margin-top:16px}
+.mb-4{margin-bottom:4px}
+.mb-8{margin-bottom:8px}
+.mb-16{margin-bottom:16px}
+.text-muted{color:var(--muted)}
+.text-sm{font-size:12px}
+.text-xs{font-size:11px}
+.fw-600{font-weight:600}
+.divider{border:none;border-top:1px solid var(--border);margin:16px 0}
+.logo-wall{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.logo-pill{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:600;color:var(--muted)}
+
+/* Activity feed */
+.activity-item{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px}
+.activity-item:last-child{border-bottom:none}
+.activity-dot{width:7px;height:7px;border-radius:50%;background:var(--brand);flex-shrink:0;margin-top:4px}
+.activity-time{color:var(--muted);white-space:nowrap}
+
+/* Service cards */
+.service-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;transition:box-shadow .15s}
+.service-card:hover{box-shadow:0 2px 10px rgba(0,0,0,.07)}
+.service-icon{font-size:20px;margin-bottom:8px}
+.service-title{font-weight:700;font-size:14px;margin-bottom:4px;color:var(--text)}
+.service-desc{font-size:12px;color:var(--muted)}
+.services-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-bottom:24px}
+
+/* Industry card */
+.ind-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center}
+.ind-icon{font-size:28px;margin-bottom:8px}
+.ind-title{font-weight:700;margin-bottom:4px}
+.ind-desc{font-size:12px;color:var(--muted)}
+.industries-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+
+/* Toggle */
+.toggle-wrap{display:flex;align-items:center;gap:10px;font-size:13px}
+.toggle{position:relative;width:38px;height:20px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:var(--border);border-radius:20px;cursor:pointer;transition:.2s}
+.toggle-slider::before{content:'';position:absolute;width:14px;height:14px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+.toggle input:checked+.toggle-slider{background:var(--brand)}
+.toggle input:checked+.toggle-slider::before{transform:translateX(18px)}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+@media(max-width:860px){
+  #app{grid-template-columns:1fr;grid-template-rows:var(--header) auto 1fr}
+  #sidebar{grid-column:1;grid-row:2;display:flex;flex-wrap:wrap;gap:0;padding:4px 8px;border-right:none;border-bottom:1px solid var(--border);max-height:none}
+  #view{grid-row:3}
+  .nav-group,.nav-label{display:none}
+  .nav-item{padding:5px 10px;border-left:none;border-bottom:2px solid transparent;font-size:12px}
+  .nav-item.active{border-bottom-color:var(--brand);background:none}
+  .kanban{grid-template-columns:repeat(2,1fr)}
+  .two-col,.three-col{grid-template-columns:1fr}
+  .form-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Header -->
+  <header id="topbar">
+    <div class="logo"><span>Web</span>Flow OS <span class="version">v0.26</span></div>
+    <div class="spacer"></div>
+    <div id="ai-pill"><span class="dot"></span><span id="ai-mode-label">Heuristic AI</span></div>
+    <div class="user-pill">Webfluence</div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav id="sidebar">
+    <div class="nav-group">
+      <div class="nav-label">Core</div>
+      <div class="nav-item active" data-tab="dashboard"><span class="nav-icon">⚡</span>Command Web</div>
+      <div class="nav-item" data-tab="clients"><span class="nav-icon">🏢</span>Clients</div>
+      <div class="nav-item" data-tab="leads"><span class="nav-icon">🎯</span>Leads & Pipeline</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">Delivery</div>
+      <div class="nav-item" data-tab="campaigns"><span class="nav-icon">📈</span>Performance Ads</div>
+      <div class="nav-item" data-tab="projects"><span class="nav-icon">🗂️</span>Projects</div>
+      <div class="nav-item" data-tab="social"><span class="nav-icon">📅</span>Social Calendar</div>
+      <div class="nav-item" data-tab="reports"><span class="nav-icon">📊</span>Reports</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">Ops</div>
+      <div class="nav-item" data-tab="finance"><span class="nav-icon">💰</span>Finance</div>
+      <div class="nav-item" data-tab="team"><span class="nav-icon">👥</span>Team & Ops</div>
+      <div class="nav-item" data-tab="ai"><span class="nav-icon">🤖</span>AI Studio</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">Studio</div>
+      <div class="nav-item" data-tab="services"><span class="nav-icon">🚀</span>Services</div>
+      <div class="nav-item" data-tab="industries"><span class="nav-icon">🏭</span>Industries</div>
+      <div class="nav-item" data-tab="studio"><span class="nav-icon">✨</span>Studio</div>
+    </div>
+  </nav>
+
+  <!-- Main View -->
+  <main id="view"></main>
+</div>
+
+<!-- Modal -->
+<div id="modal-overlay">
+  <div id="modal-box">
+    <button id="modal-close" onclick="closeModal()">✕</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+const AI_MODES = ['heuristic','claude'];
+let aiMode = 'heuristic';
+
+const state = {
+
+clients: [
+  {id:'mavenn',name:'Mavenn Realty',industry:'Real Estate',contact:'Satyam · CEO',result:'Site-visit cost down 38% in 90 days',retainer:160000,health:88},
+  {id:'nambiyar',name:'Nambiyar Builder',industry:'Real Estate',contact:'Ashutosh · Owner',result:'1,200+ leads on flagship project in Q1',retainer:185000,health:91},
+  {id:'gyn',name:'The Gyn Next Door',industry:'Healthcare',contact:'Dr. Sharanya · Sr. Gynaecologist',result:'Booked appointments up 46%',retainer:85000,health:84},
+  {id:'homies',name:'Homies',industry:'Fintech · Loans',contact:'Bhargav · CEO',result:'Approved-loan CPL down 32% at scale',retainer:130000,health:79},
+  {id:'ichain',name:'iChain (Singapore)',industry:'B2B & SaaS',contact:'Suresh · Founder',result:'India MQLs now 38% of pipeline',retainer:210000,health:82},
+  {id:'nextfoot',name:'Next Footstep',industry:'Real Estate',contact:'Ravi Tripathi · CEO',result:'Lead quality 2x in the first quarter',retainer:115000,health:77}
+],
+
+campaigns: [
+  {id:'c1',client:'nambiyar',clientName:'Nambiyar Builder',name:'Flagship Project — Meta Leads',channel:'META',budget:80000,spend:91200,impressions:450000,clicks:9800,leads:312,conversions:28,revenue:382400},
+  {id:'c2',client:'nambiyar',clientName:'Nambiyar Builder',name:'Brand Search — Google',channel:'GOOGLE',budget:45000,spend:41200,impressions:180000,clicks:7200,leads:190,conversions:22,revenue:224000},
+  {id:'c3',client:'mavenn',clientName:'Mavenn Realty',name:'Site Visit Leads — Meta',channel:'META',budget:60000,spend:57300,impressions:320000,clicks:6100,leads:185,conversions:19,revenue:291000},
+  {id:'c4',client:'mavenn',clientName:'Mavenn Realty',name:'HSR Inventory — Google PPC',channel:'GOOGLE',budget:50000,spend:48100,impressions:210000,clicks:8900,leads:210,conversions:24,revenue:264000},
+  {id:'c5',client:'gyn',clientName:'The Gyn Next Door',name:'Appointments — Meta',channel:'META',budget:35000,spend:32400,impressions:180000,clicks:4200,leads:95,conversions:31,revenue:120900},
+  {id:'c6',client:'homies',clientName:'Homies',name:'Loan Leads — Google Search',channel:'GOOGLE',budget:55000,spend:51800,impressions:290000,clicks:9100,leads:280,conversions:38,revenue:232000},
+  {id:'c7',client:'ichain',clientName:'iChain (Singapore)',name:'India MQL Pipeline — LinkedIn',channel:'LINKEDIN',budget:90000,spend:85400,impressions:95000,clicks:3200,leads:48,conversions:12,revenue:384000},
+  {id:'c8',client:'nextfoot',clientName:'Next Footstep',name:'Quality Leads — Meta',channel:'META',budget:40000,spend:37600,impressions:210000,clicks:5100,leads:142,conversions:17,revenue:154000}
+],
+
+leads: [
+  {id:'l1',name:'Rajesh Khanna',company:'Apex Properties',sector:'Real Estate',service:'Performance Marketing (Google & Meta)',budget:'₹5L – ₹20L',source:'Inbound Website',score:0,lifecycle:'',owner:'',createdAt:new Date(Date.now()-1*86400000),lastActivity:new Date(Date.now()-1*86400000),stage:'Discovery',notes:'Wants to run campaigns for 3 upcoming projects.'},
+  {id:'l2',name:'Sunita Rao',company:'ClearMed Clinics',sector:'Healthcare',service:'End-to-end Marketing',budget:'₹1L – ₹5L',source:'Referral',score:0,lifecycle:'',owner:'',createdAt:new Date(Date.now()-4*86400000),lastActivity:new Date(Date.now()-4*86400000),stage:'Discovery',notes:'Chain of 4 clinics across Bangalore.'},
+  {id:'l3',name:'Kunal Shah',company:'FinEase',sector:'Fintech',service:'Performance Marketing (Google & Meta)',budget:'₹20L+',source:'LinkedIn',score:0,lifecycle:'',owner:'',createdAt:new Date(Date.now()-2*86400000),lastActivity:new Date(Date.now()-2*86400000),stage:'Proposal',notes:'Loan product targeting salaried professionals.'},
+  {id:'l4',name:'Meghna Pillai',company:'Wanderlust Stays',sector:'Travel & Hospitality',service:'Social Media',budget:'Under ₹1L',source:'Instagram DM',score:0,lifecycle:'',owner:'',createdAt:new Date(Date.now()-6*86400000),lastActivity:new Date(Date.now()-6*86400000),stage:'Discovery',notes:'Boutique homestay chain.'},
+  {id:'l5',name:'Arun Sharma',company:'TalentTrack SaaS',sector:'B2B & SaaS',service:'End-to-end Marketing',budget:'₹5L – ₹20L',source:'Referral',score:0,lifecycle:'',owner:'',createdAt:new Date(Date.now()-3*86400000),lastActivity:new Date(Date.now()-3*86400000),stage:'Negotiation',notes:'Series A funded, needs demand-gen + brand.'}
+],
+
+deals:[],
+
+projects: [
+  {id:'p1',title:'Nambiyar — Sep Campaign Brief',client:'Nambiyar Builder',discipline:'PM',stage:'Backlog',due:'2026-06-20'},
+  {id:'p2',title:'Mavenn — Creative Refresh',client:'Mavenn Realty',discipline:'CR',stage:'Backlog',due:'2026-06-22'},
+  {id:'p3',title:'iChain — LinkedIn Ad Set',client:'iChain (Singapore)',discipline:'PM',stage:'In Progress',due:'2026-06-15'},
+  {id:'p4',title:'Homies — Landing Page CRO',client:'Homies',discipline:'WB',stage:'In Progress',due:'2026-06-18'},
+  {id:'p5',title:'Gyn Next Door — Content Calendar',client:'The Gyn Next Door',discipline:'CW',stage:'Review',due:'2026-06-14'},
+  {id:'p6',title:'Next Footstep — Analytics Audit',client:'Next Footstep',discipline:'AN',stage:'Review',due:'2026-06-13'},
+  {id:'p7',title:'Webfluence — Monthly Deck',client:'Internal',discipline:'ST',stage:'Approved',due:'2026-06-10'},
+  {id:'p8',title:'iChain — MQL Report Q2',client:'iChain (Singapore)',discipline:'ST',stage:'Approved',due:'2026-06-08'},
+  {id:'p9',title:'Mavenn — SEO Blog Series',client:'Mavenn Realty',discipline:'CW',stage:'Backlog',due:'2026-06-28'},
+  {id:'p10',title:'Homies — YouTube Ad Script',client:'Homies',discipline:'CR',stage:'In Progress',due:'2026-06-19'}
+],
+
+socialPosts: [
+  {date:'2026-06-02',channel:'ig',text:'Behind the metrics: how we cut Mavenn site-visit cost 38%'},
+  {date:'2026-06-04',channel:'li',text:'iChain case study — 38% India MQL share in 6 months'},
+  {date:'2026-06-05',channel:'meta',text:'Homies loan campaign: CPL down 32% — client story thread'},
+  {date:'2026-06-09',channel:'ig',text:'5 performance ad mistakes we stopped making in 2025'},
+  {date:'2026-06-11',channel:'yt',text:'Full ROAS breakdown — Nambiyar Builder Q1 2026'},
+  {date:'2026-06-12',channel:'li',text:'Why server-side tracking changed everything for our clients'},
+  {date:'2026-06-16',channel:'ig',text:'Creative vs Targeting: what actually moved our CTR'},
+  {date:'2026-06-18',channel:'meta',text:'The Gyn Next Door — how healthcare ads can work with compliance'},
+  {date:'2026-06-19',channel:'li',text:'B2B SaaS MQL generation — our LinkedIn playbook'},
+  {date:'2026-06-23',channel:'ig',text:'Studio tour — meet the 10 operators behind Webfluence'},
+  {date:'2026-06-25',channel:'yt',text:'Monthly report walk-through — watch how we review campaigns'},
+  {date:'2026-06-26',channel:'meta',text:'₹5L budget → 4.8x ROAS — a real estate campaign story'},
+  {date:'2026-06-30',channel:'li',text:'Q2 wrap: what worked, what didn\'t, and what\'s next'}
+],
+
+invoices: [
+  {id:'INV-061',client:'iChain (Singapore)',amount:210000,due:'2026-06-01',status:'OVERDUE'},
+  {id:'INV-062',client:'Nambiyar Builder',amount:185000,due:'2026-06-10',status:'PAID'},
+  {id:'INV-063',client:'Mavenn Realty',amount:160000,due:'2026-06-15',status:'PAID'},
+  {id:'INV-064',client:'Homies',amount:130000,due:'2026-06-20',status:'PENDING'},
+  {id:'INV-065',client:'The Gyn Next Door',amount:85000,due:'2026-06-20',status:'PENDING'},
+  {id:'INV-066',client:'Next Footstep',amount:115000,due:'2026-06-25',status:'PENDING'}
+],
+
+team: [
+  {id:'t1',name:'Rohan Mehta',code:'ST',discipline:'Strategy & Accounts',loginTime:'09:05',hours:7.5,status:'Active',report:'Reviewed Nambiyar Q2 plan, briefed PM team on Homies refresh.',tasks:[]},
+  {id:'t2',name:'Priya Sharma',code:'ST',discipline:'Strategy & Accounts',loginTime:'09:22',hours:6.8,status:'Active',report:'Client call with Mavenn, updated proposals tracker.',tasks:[]},
+  {id:'t3',name:'Vikram Nair',code:'PM',discipline:'Performance Media',loginTime:'08:55',hours:8.2,status:'Active',report:'Optimised Nambiyar Meta bids, paused 3 underperforming ad sets.',tasks:[]},
+  {id:'t4',name:'Ananya Rao',code:'PM',discipline:'Performance Media',loginTime:'09:10',hours:7.9,status:'Active',report:'iChain LinkedIn campaigns A/B test live; Homies search budget shift +15%.',tasks:[]},
+  {id:'t5',name:'Karthik Suresh',code:'PM',discipline:'Performance Media',loginTime:'09:30',hours:7.0,status:'Active',report:'Mavenn Google Shopping feed fix; Next Footstep retargeting live.',tasks:[]},
+  {id:'t6',name:'Deepika Joshi',code:'CR',discipline:'Creative — Design & Motion',loginTime:'09:00',hours:8.0,status:'Active',report:'Delivered 6 Nambiyar creatives, started Homies motion brief.',tasks:[]},
+  {id:'t7',name:'Arjun Pillai',code:'CR',discipline:'Creative — Design & Motion',loginTime:'10:00',hours:6.5,status:'Active',report:'Mavenn brand refresh moodboard sent for review.',tasks:[]},
+  {id:'t8',name:'Neha Gupta',code:'CW',discipline:'Content & SEO',loginTime:'09:15',hours:7.3,status:'Active',report:'Gyn Next Door blog post live; Mavenn SEO cluster audit done.',tasks:[]},
+  {id:'t9',name:'Siddharth Kumar',code:'WB',discipline:'Web & CRO',loginTime:'09:45',hours:6.2,status:'Active',report:'Homies landing page A/B variant deployed; heatmap review scheduled.',tasks:[]},
+  {id:'t10',name:'Meera Iyer',code:'AN',discipline:'Analytics & Attribution',loginTime:'09:00',hours:8.5,status:'Active',report:'Server-side GA4 audit for all 6 clients; iChain attribution model updated.',tasks:[]}
+],
+
+activity: [
+  {time:'09:00 AM',text:'Meera Iyer completed GA4 audit across 6 client accounts',type:'ops'},
+  {time:'09:30 AM',text:'Vikram Nair paused 3 underperforming Nambiyar ad sets',type:'campaign'},
+  {time:'10:15 AM',text:'Deepika Joshi delivered 6 Nambiyar creatives to the review board',type:'creative'},
+  {time:'10:40 AM',text:'New inbound enquiry captured — Rajesh Khanna, Apex Properties',type:'lead'},
+  {time:'11:00 AM',text:'Anomaly: Nambiyar Builder Meta campaign has overspent budget by ₹11,200',type:'alert'}
+],
+
+generatedReports: {}
+};
+
+// ─── Score leads on load ───
+state.leads.forEach(l => {
+  const scored = W1_scoreLead(l);
+  l.score = scored.score;
+  l.lifecycle = scored.lifecycle;
+  l.owner = scored.owner;
+});
+
+// ─── Auto-create deals from high-score leads ───
+state.leads.filter(l=>l.score>=50).forEach(l => {
+  if(!state.deals.find(d=>d.leadId===l.id)){
+    state.deals.push({id:'d'+l.id,leadId:l.id,name:l.company,value:budgetMid(l.budget),stage:l.stage,score:l.score,contact:l.name});
+  }
+});
+
+// ═══════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════
+function fmt(n){return new Intl.NumberFormat('en-IN').format(Math.round(n))}
+function fmtC(n){return '₹'+fmt(n)}
+function pct(n){return n.toFixed(1)+'%'}
+function x(n){return n.toFixed(2)+'x'}
+function health2color(h){return h>=85?'var(--success)':h>=70?'var(--warning)':'var(--danger)'}
+function channelTag(ch){const m={META:'tag-blue',GOOGLE:'tag-green',LINKEDIN:'tag-brand',YOUTUBE:'tag-red'};return `<span class="tag ${m[ch]||'tag-muted'}">${ch}</span>`}
+function statusTag(s){const m={PAID:'tag-green',OVERDUE:'tag-red',PENDING:'tag-amber'};return `<span class="tag ${m[s]||'tag-muted'}">${s}</span>`}
+function lifecycleTag(l){const m={SQL:'tag-green',MQL:'tag-blue',LEAD:'tag-muted'};return `<span class="tag ${m[l]||'tag-muted'}">${l||'NEW'}</span>`}
+function budgetMid(b){const m={'Under ₹1L':80000,'₹1L – ₹5L':250000,'₹5L – ₹20L':1000000,'₹20L+':2500000};return m[b]||100000}
+
+function cMetrics(c){
+  const roas=c.revenue/c.spend;
+  const ctr=c.clicks/c.impressions*100;
+  const cpc=c.spend/c.clicks;
+  const cpl=c.spend/c.leads;
+  const cpa=c.spend/c.conversions;
+  const overspend=c.spend>c.budget;
+  return {roas,ctr,cpc,cpl,cpa,overspend};
+}
+
+function mrr(){return state.clients.reduce((s,c)=>s+c.retainer,0)}
+function todayStr(){return new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}
+function addActivity(text,type='ops'){
+  const now=new Date();
+  const t=now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  state.activity.unshift({time:t,text,type});
+  if(state.activity.length>30)state.activity.pop();
+}
+
+// ═══════════════════════════════════════════════════════
+//  W1 — CAPTURE & SCORE LEAD
+// ═══════════════════════════════════════════════════════
+function W1_scoreLead(lead){
+  let score=30;
+  // Source weight
+  if(lead.source==='Referral')score+=20;
+  else if(lead.source==='Inbound Website')score+=12;
+  else if(lead.source==='LinkedIn')score+=8;
+  // Budget weight
+  if(lead.budget==='₹20L+')score+=25;
+  else if(lead.budget==='₹5L – ₹20L')score+=15;
+  else if(lead.budget==='₹1L – ₹5L')score+=8;
+  // Core sector
+  const hotSectors=['Real Estate','Fintech','B2B & SaaS'];
+  if(hotSectors.includes(lead.sector))score+=10;
+  // End-to-end scope
+  if(lead.service==='End-to-end Marketing')score+=10;
+  else if(lead.service.includes('Performance'))score+=5;
+  score=Math.min(100,score);
+  const lifecycle=score>=75?'SQL':score>=50?'MQL':'LEAD';
+  const disciplineMap={'Performance Marketing (Google & Meta)':'PM','SEO & Content':'CW','Brand & Creative':'CR','Web & Landing Pages':'WB','Social Media':'CW','End-to-end Marketing':'ST'};
+  const discCode=disciplineMap[lead.service]||'ST';
+  const op=state.team.find(t=>t.code===discCode)||state.team[0];
+  return {score,lifecycle,owner:op.name};
+}
+
+function W1_captureLead(formData){
+  const lead={
+    id:'l'+Date.now(),
+    name:formData.name,company:formData.company,
+    sector:formData.sector,service:formData.service,budget:formData.budget,
+    source:formData.source||'Inbound Website',
+    score:0,lifecycle:'',owner:'',
+    createdAt:new Date(),lastActivity:new Date(),
+    stage:'Discovery',notes:formData.notes||''
+  };
+  const scored=W1_scoreLead(lead);
+  lead.score=scored.score;lead.lifecycle=scored.lifecycle;lead.owner=scored.owner;
+  state.leads.unshift(lead);
+  addActivity(`New lead captured — ${lead.name} (${lead.company}) | Score: ${lead.score} | ${lead.lifecycle}`,'lead');
+  if(lead.score>=50){
+    state.deals.push({id:'d'+lead.id,leadId:lead.id,name:lead.company,value:budgetMid(lead.budget),stage:'Discovery',score:lead.score,contact:lead.name});
+    addActivity(`Deal auto-created for ${lead.company} (score ${lead.score})`,'lead');
+  }
+  return lead;
+}
+
+// ═══════════════════════════════════════════════════════
+//  W3 — SYNC CAMPAIGNS (simulate 1 day)
+// ═══════════════════════════════════════════════════════
+function W3_syncCampaigns(){
+  state.campaigns.forEach(c=>{
+    const dailyBudget=c.budget/30;
+    const variance=(Math.random()-.4)*.15;
+    const dailySpend=dailyBudget*(1+variance);
+    c.spend=Math.round(c.spend+dailySpend);
+    const ctr=(c.clicks/c.impressions)*(1+(Math.random()-.5)*.1);
+    const newImpr=Math.round(c.impressions*0.035);
+    const newClicks=Math.round(newImpr*ctr);
+    const convRate=c.conversions/c.clicks;
+    const newConv=Math.round(newClicks*convRate*(1+(Math.random()-.5)*.2));
+    c.impressions+=newImpr;c.clicks+=newClicks;c.conversions+=newConv;
+    c.leads+=Math.round(newClicks*.032);
+    c.revenue=Math.round(c.revenue+newConv*(c.revenue/c.conversions||5000));
+  });
+  addActivity('W3 sync complete — campaign metrics updated with simulated daily delivery','campaign');
+}
+
+// ═══════════════════════════════════════════════════════
+//  W4 — GENERATE REPORT
+// ═══════════════════════════════════════════════════════
+function W4_generateReport(clientId){
+  const client=state.clients.find(c=>c.id===clientId);
+  if(!client)return;
+  const camps=state.campaigns.filter(c=>c.client===clientId);
+  const totalSpend=camps.reduce((s,c)=>s+c.spend,0);
+  const totalLeads=camps.reduce((s,c)=>s+c.leads,0);
+  const totalConv=camps.reduce((s,c)=>s+c.conversions,0);
+  const totalRev=camps.reduce((s,c)=>s+c.revenue,0);
+  const avgROAS=totalSpend>0?totalRev/totalSpend:0;
+  const avgCPL=totalLeads>0?totalSpend/totalLeads:0;
+
+  let summary='';
+  if(aiMode==='heuristic'){
+    const roasVerdict=avgROAS>=4?'strong performance':'room for improvement';
+    const trend=client.health>=85?'positive trajectory':'watch-list';
+    summary=`${client.name} is showing ${roasVerdict} with a blended ROAS of ${avgROAS.toFixed(1)}x across ${camps.length} active campaign${camps.length!==1?'s':''}. Total spend this period: ${fmtC(totalSpend)}, generating ${fmt(totalLeads)} leads and ${fmt(totalConv)} conversions. Account health score is ${client.health}/100 (${trend}). CPL stands at ${fmtC(avgCPL)}. Recommended actions: ${avgROAS<3?'reallocate budget from underperforming ad sets; test new creatives urgently.':'maintain current bid strategy; explore scaling top-performing ad sets by 15–20%.'}`;
+  } else {
+    summary='[Claude API would generate a detailed narrative here — configure ANTHROPIC_API_KEY to enable.]';
+  }
+
+  const report={clientId,clientName:client.name,generatedAt:new Date().toISOString(),totalSpend,totalLeads,totalConv,avgROAS,avgCPL,summary,health:client.health,retainer:client.retainer};
+  state.generatedReports[clientId]=report;
+  addActivity(`W4 report generated for ${client.name}`,'ops');
+  return report;
+}
+
+// ═══════════════════════════════════════════════════════
+//  W5 — ANOMALY SCAN
+// ═══════════════════════════════════════════════════════
+function W5_checkAnomalies(){
+  const alerts=[];
+  state.campaigns.forEach(c=>{
+    const m=cMetrics(c);
+    if(m.overspend) alerts.push({type:'danger',msg:`<strong>${c.clientName} — ${c.name}</strong>: Overspend detected. Spent ${fmtC(c.spend)} vs budget ${fmtC(c.budget)} (+${fmtC(c.spend-c.budget)}).`});
+    if(m.roas<1.5) alerts.push({type:'danger',msg:`<strong>${c.clientName} — ${c.name}</strong>: ROAS ${m.roas.toFixed(2)}x is below 1.5x threshold.`});
+  });
+  state.invoices.filter(i=>i.status==='OVERDUE').forEach(i=>{
+    alerts.push({type:'danger',msg:`<strong>Overdue Invoice ${i.id}</strong>: ${i.client} — ${fmtC(i.amount)} was due ${i.due}.`});
+  });
+  const threeDaysAgo=Date.now()-3*86400000;
+  state.leads.filter(l=>l.score>=70&&l.lastActivity<new Date(threeDaysAgo)).forEach(l=>{
+    alerts.push({type:'warning',msg:`<strong>Hot Lead Idle</strong>: ${l.name} (${l.company}) scored ${l.score} but no activity for 3+ days.`});
+  });
+  if(alerts.length===0) alerts.push({type:'success',msg:'No anomalies detected — all campaigns and invoices look healthy.'});
+  addActivity(`W5 anomaly scan complete — ${alerts.filter(a=>a.type!=='success').length} issue(s) flagged`,'alert');
+  return alerts;
+}
+
+// ═══════════════════════════════════════════════════════
+//  MODAL
+// ═══════════════════════════════════════════════════════
+function openModal(html){
+  document.getElementById('modal-content').innerHTML=html;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('open')}
+document.getElementById('modal-overlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal()});
+
+// ═══════════════════════════════════════════════════════
+//  ROUTER
+// ═══════════════════════════════════════════════════════
+let activeTab='dashboard';
+function go(tabId){
+  activeTab=tabId;
+  document.querySelectorAll('.nav-item').forEach(el=>{
+    el.classList.toggle('active',el.dataset.tab===tabId);
+  });
+  document.getElementById('view').innerHTML=render(tabId);
+  bindTabEvents(tabId);
+}
+document.querySelectorAll('.nav-item[data-tab]').forEach(el=>{
+  el.addEventListener('click',()=>go(el.dataset.tab));
+});
+
+// ═══════════════════════════════════════════════════════
+//  RENDER DISPATCHER
+// ═══════════════════════════════════════════════════════
+function render(tab){
+  const fns={dashboard:renderDashboard,clients:renderClients,leads:renderLeads,campaigns:renderCampaigns,projects:renderProjects,social:renderSocial,reports:renderReports,finance:renderFinance,team:renderTeam,ai:renderAI,services:renderServices,industries:renderIndustries,studio:renderStudio};
+  return (fns[tab]||renderDashboard)();
+}
+
+// ═══════════════════════════════════════════════════════
+//  TAB: DASHBOARD
+// ═══════════════════════════════════════════════════════
+function renderDashboard(){
+  const anomalies=W5_checkAnomalies();
+  const totalPipeline=state.deals.reduce((s,d)=>s+d.value,0);
+  const outstanding=state.invoices.filter(i=>i.status!=='PAID').reduce((s,i)=>s+i.amount,0);
+  const totalSpend=state.campaigns.reduce((s,c)=>s+c.spend,0);
+  const totalRev=state.campaigns.reduce((s,c)=>s+c.revenue,0);
+  const avgROAS=(totalRev/totalSpend).toFixed(2);
+  const totalLeads=state.campaigns.reduce((s,c)=>s+c.leads,0);
+
+  // Bar chart data for campaigns
+  const maxRev=Math.max(...state.campaigns.map(c=>c.revenue));
+  const chartBars=state.campaigns.map(c=>{
+    const m=cMetrics(c);
+    const w=(c.revenue/maxRev*100).toFixed(1);
+    const col=m.overspend?'var(--danger)':m.roas>=4?'var(--success)':'var(--info)';
+    return `<div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:2px">
+        <span>${c.clientName.split(' ')[0]} — ${c.channel}</span><span>${x(m.roas)} ROAS</span>
+      </div>
+      <div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${w}%;background:${col};border-radius:3px;transition:width .5s"></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const alertHtml=anomalies.slice(0,3).map(a=>`<div class="alert alert-${a.type}">${a.type==='danger'?'🚨':a.type==='warning'?'⚠️':'✅'} ${a.msg}</div>`).join('');
+
+  const actFeed=state.activity.slice(0,8).map(a=>`
+    <div class="activity-item">
+      <div class="activity-dot" style="background:${a.type==='alert'?'var(--danger)':a.type==='lead'?'var(--info)':'var(--brand)'}"></div>
+      <div style="flex:1">${a.text}</div>
+      <div class="activity-time">${a.time}</div>
+    </div>`).join('');
+
+  return `
+<div class="page-title">⚡ Command Web</div>
+<div class="page-sub">Webfluence Marketing Solutions — ${todayStr()}</div>
+
+<div class="stat-grid">
+  <div class="stat-card"><div class="label">Active Clients</div><div class="val">${state.clients.length}</div><div class="sub">Across 4 industries</div></div>
+  <div class="stat-card"><div class="label">MRR</div><div class="val green">${fmtC(mrr())}</div><div class="sub">₹${(mrr()/100000).toFixed(1)}L/month</div></div>
+  <div class="stat-card"><div class="label">Blended ROAS</div><div class="val">${avgROAS}x</div><div class="sub">Target: 4.8x</div></div>
+  <div class="stat-card"><div class="label">Total Leads</div><div class="val">${fmt(totalLeads)}</div><div class="sub">This period</div></div>
+  <div class="stat-card"><div class="label">Pipeline</div><div class="val amber">${fmtC(totalPipeline)}</div><div class="sub">${state.deals.length} open deals</div></div>
+  <div class="stat-card"><div class="label">Outstanding</div><div class="val ${state.invoices.find(i=>i.status==='OVERDUE')?'red':'amber'}">${fmtC(outstanding)}</div><div class="sub">${state.invoices.filter(i=>i.status!=='PAID').length} invoices</div></div>
+  <div class="stat-card"><div class="label">Client Rating</div><div class="val">4.9 ⭐</div><div class="sub">Since 2012</div></div>
+  <div class="stat-card"><div class="label">Team Size</div><div class="val">${state.team.length}</div><div class="sub">Operators across 6 disciplines</div></div>
+</div>
+
+<div class="two-col">
+  <div>
+    <div class="card">
+      <div class="card-title">📊 Campaign ROAS — Revenue by Campaign</div>
+      ${chartBars}
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">🟢 ≥4x · 🔵 1.5–4x · 🔴 overspend</div>
+    </div>
+    <div class="card">
+      <div class="card-title">🚨 Anomaly Alerts <span class="ct-badge">W5</span></div>
+      ${alertHtml}
+    </div>
+  </div>
+  <div>
+    <div class="card">
+      <div class="card-title">📋 Campaign Snapshot</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Campaign</th><th>Channel</th><th>ROAS</th><th>CPL</th><th>Status</th></tr></thead>
+          <tbody>
+            ${state.campaigns.map(c=>{const m=cMetrics(c);return`<tr>
+              <td><div class="fw-600" style="font-size:12px">${c.name}</div><div class="text-xs text-muted">${c.clientName}</div></td>
+              <td>${channelTag(c.channel)}</td>
+              <td><span style="color:${m.roas>=4?'var(--success)':m.roas<1.5?'var(--danger)':'var(--warning)'};font-weight:700">${x(m.roas)}</span></td>
+              <td>${fmtC(m.cpl)}</td>
+              <td>${m.overspend?`<span class="tag tag-red">OVERSPEND</span>`:`<span class="tag tag-green">Active</span>`}</td>
+            </tr>`}).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">🔔 Activity Feed</div>
+      ${actFeed}
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">📬 Capture New Enquiry <span class="ct-badge">W1</span></div>
+  ${leadCaptureForm('dashboard')}
+</div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  TAB: CLIENTS
+// ═══════════════════════════════════════════════════════
+function renderClients(){
+  const cards=state.clients.map(c=>{
+    const hCol=health2color(c.health);
+    return `<div class="card" style="margin-bottom:12px">
+      <div class="flex-between mb-8">
+        <div>
+          <div class="fw-600" style="font-size:15px">${c.name}</div>
+          <div class="text-xs text-muted mt-4">${c.contact}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="fw-600" style="color:var(--brand-text)">${fmtC(c.retainer)}<span class="text-xs text-muted">/mo</span></div>
+          <span class="tag tag-muted text-xs">${c.industry}</span>
+        </div>
+      </div>
+      <div style="color:var(--success);font-size:13px;margin-bottom:10px">✓ ${c.result}</div>
+      <div class="health-bar">
+        <span class="text-xs text-muted">Health</span>
+        <div class="hb-track"><div class="hb-fill" style="width:${c.health}%;background:${hCol}"></div></div>
+        <span style="font-size:12px;font-weight:700;color:${hCol}">${c.health}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  const logos=['Godrej Properties','Prestige Group','Mahindra Lifespace','Lodha Group','Sattva Group','Brigade Enterprises','Sobha Developers','Adani Realty'];
+  const logoWall=logos.map(l=>`<div class="logo-pill">${l}</div>`).join('');
+
+  return `
+<div class="page-title">🏢 Clients</div>
+<div class="page-sub">6 active retainer accounts</div>
+<div class="two-col">${cards}</div>
+<div class="card mt-16">
+  <div class="card-title">🏗️ Real Estate Brands We've Scaled</div>
+  <div class="text-muted text-sm mb-8">Across 30+ brand engagements — these names have trusted Webfluence.</div>
+  <div class="logo-wall">${logoWall}</div>
+</div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  TAB: LEADS & PIPELINE
+// ═══════════════════════════════════════════════════════
+function renderLeads(){
+  const stageOrder=['Discovery','Proposal','Negotiation','Closed Won','Closed Lost'];
+  const kanbanCols=stageOrder.slice(0,4).map(stage=>{
+    const deals=state.deals.filter(d=>d.stage===stage);
+    return `<div class="kanban-col">
+      <div class="kanban-col-title">${stage} <span class="ct-badge" style="font-size:10px">${deals.length}</span></div>
+      ${deals.map(d=>`<div class="kanban-card" onclick="advanceDeal('${d.id}')">
+        <div class="kc-title">${d.name}</div>
+        <div class="kc-meta">${d.contact} · ${fmtC(d.value)}</div>
+        <div style="margin-top:4px">${scoreBadge(d.score)}</div>
+      </div>`).join('')||`<div style="text-align:center;color:var(--muted);font-size:12px;padding:12px 0">Empty</div>`}
+    </div>`;
+  }).join('');
+
+  const leadsTable=state.leads.map(l=>`<tr>
+    <td><div class="fw-600">${l.name}</div><div class="text-xs text-muted">${l.company}</div></td>
+    <td>${l.sector}</td>
+    <td>${l.budget}</td>
+    <td>${l.source}</td>
+    <td>${scoreBadge(l.score)}</td>
+    <td>${lifecycleTag(l.lifecycle)}</td>
+    <td class="text-xs">${l.owner}</td>
+    <td>${l.stage}</td>
+  </tr>`).join('');
+
+  return `
+<div class="page-title">🎯 Leads & Pipeline</div>
+<div class="page-sub">AI-scored inbound enquiries + deal kanban</div>
+
+<div class="card mb-16">
+  <div class="card-title">📬 Capture New Enquiry <span class="ct-badge">W1</span></div>
+  ${leadCaptureForm('leads')}
+</div>
+
+<div class="card mb-16">
+  <div class="card-title">🗂️ Deal Kanban</div>
+  <div class="kanban">${kanbanCols}</div>
+  <div class="text-xs text-muted mt-16">Click a deal card to advance its stage.</div>
+</div>
+
+<div class="card">
+  <div class="card-title">📋 Inbound Enquiries</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Name</th><th>Sector</th><th>Budget</th><th>Source</th><th>Score</th><th>Lifecycle</th><th>Owner</th><th>Stage</th></tr></thead>
+      <tbody>${leadsTable}</tbody>
+    </table>
+  </div>
+</div>`;
+}
+
+function scoreBadge(score){
+  const col=score>=75?'var(--success)':score>=50?'var(--info)':'var(--muted)';
+  return `<span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:${col}18;border:1.5px solid ${col};color:${col};font-size:11px;font-weight:700">${score}</span>`;
+}
+
+function advanceDeal(dealId){
+  const order=['Discovery','Proposal','Negotiation','Closed Won'];
+  const d=state.deals.find(x=>x.id===dealId);
+  if(!d)return;
+  const i=order.indexOf(d.stage);
+  if(i<order.length-1){d.stage=order[i+1];addActivity(`Deal "${d.name}" advanced to ${d.stage}`,'lead');}
+  go('leads');
+}
+
+// ═══════════════════════════════════════════════════════
+//  TAB: CAMPAIGNS
+// ═══════════════════════════════════════════════════════
+function renderCampaigns(){
+  const channels=['META','GOOGLE','LINKEDIN'];
+  const chanCards=channels.map(ch=>{
+    const cList=state.campaigns.filter(c=>c.channel===ch);
+    const totalSpend=cList.reduce((s,c)=>s+c.spend,0);
+    const totalRev=cList.reduce((s,c)=>s+c.revenue,0);
+    const roas=totalSpend>0?totalRev/totalSpend:0;
+    const col=roas>=4?'var(--success)':roas>=1.5?'var(--warning)':'var(--danger)';
+    return `<div class="card">
+      <div class="text-xs text-muted mb-4">${ch} Channel</div>
+      <div style="font-size:22px;font-weight:700;color:${col}">${roas.toFixed(2)}x ROAS</div>
+      <div class="text-xs text-muted">${fmtC(totalSpend)} spend · ${cList.length} campaigns</div>
+    </div>`;
+  }).join('');
+
+  const rows=state.campaigns.map(c=>{
+    const m=cMetrics(c);
+    return `<tr>
+      <td><div class="fw-600" style="font-size:12px">${c.name}</div><div class="text-xs text-muted">${c.clientName}</div></td>
+      <td>${channelTag(c.channel)}</td>
+      <td>${fmtC(c.budget)}</td>
+      <td style="color:${m.overspend?'var(--danger)':'var(--text)'};font-weight:${m.overspend?700:400}">${fmtC(c.spend)} ${m.overspend?'🔴':''}</td>
+      <td>${fmt(c.impressions)}</td>
+      <td>${pct(m.ctr)}</td>
+      <td>${fmtC(m.cpc)}</td>
+      <td>${fmt(c.leads)}</td>
+      <td>${fmtC(m.cpl)}</td>
+      <td>${fmt(c.conversions)}</td>
+      <td><span style="font-weight:700;color:${m.roas>=4?'var(--success)':m.roas<1.5?'var(--danger)':'var(--warning)'}">${x(m.roas)}</span></td>
+    </tr>`;
+  }).join('');
+
+  return `
+<div class="page-title">📈 Performance Ads</div>
+<div class="page-sub">8 active campaigns across META / GOOGLE / LINKEDIN</div>
+<div class="three-col mb-16">${chanCards}</div>
+<div class="card">
+  <div class="card-title flex-between">
+    <span>Campaign Table</span>
+    <button class="btn btn-brand btn-sm" onclick="syncAndRefresh()">🔄 Sync Data (W3)</button>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Campaign</th><th>Channel</th><th>Budget</th><th>Spend</th><th>Impressions</th><th>CTR</th><th>CPC</th><th>Leads</th><th>CPL</th><th>Conv</th><th>ROAS</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>
+</div>`;
+}
+
+function syncAndRefresh(){
+  W3_syncCampaigns();
+  go('campaigns');
+  openModal(`<h2 style="margin-bottom:12px">🔄 W3 Sync Complete</h2><p>One day of simulated ad delivery applied to all 8 campaigns. Metrics updated — ROAS, CPL, CTR and spend recomputed.</p><br><button class="btn btn-brand" onclick="closeModal()">Done</button>`);
+}
+
+// ═══════════════════════════════════════════════════════
+//  TAB: PROJECTS
+// ═══════════════════════════════════════════════════════
+function renderProjects(){
+  const stages=['Backlog','In Progress','Review','Approved'];
+  const cols=stages.map(stage=>{
+    const items=state.projects.filter(p=>p.stage===stage);
+    const colorMap={Backlog:'var(--muted)',['In Progress']:'var(--info)',Review:'var(--warning)',Approved:'var(--success)'};
+    return `<div class="kanban-col">
+      <div class="kanban-col-title" style="color:${colorMap[stage]}">${stage} <span class="ct-badge">${items.length}</span></div>
+      ${items.map(p=>`<div class="kanban-card" onclick="advanceProject('${p.id}')">
+        <div class="kc-title">${p.title}</div>
+        <div class="kc-meta">${p.client}</div>
+        <div style="margin-top:6px;display:flex;gap:6px;align-items:center">
+          <span class="tag tag-muted" style="font-size:10px">${p.discipline}</span>
+          <span class="text-xs text-muted">Due ${p.due}</span>
+        </div>
+      </div>`).join('')||`<div style="text-align:center;color:var(--muted);font-size:12px;padding:12px 0">—</div>`}
+    </div>`;
+  }).join('');
+
+  return `
+<div class="page-title">🗂️ Projects</div>
+<div class="page-sub">Click a card to advance it to the next stage</div>
+<div class="kanban">${cols}</div>`;
+}
+
+function advanceProject(pid){
+  const order=['Backlog','In Progress','Review','Approved'];
+  const p=state.projects.find(x=>x.id===pid);
+  if(!p)return;
+  const i=order.indexOf(p.stage);
+  if(i<order.length-1){p.stage=order[i+1];addActivity(`Project "${p.title}" moved to ${p.stage}`,'ops');}
+  go('projects');
+}
+
+// ═══════════════════════════════════════════════════════
+//  TAB: SOCIAL CALENDAR
+// ═══════════════════════════════════════════════════════
+function renderSocial(){
+  const year=2026,month=5; // June 2026 (0-indexed)
+  const firstDay=new Date(year,month,1).getDay();
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  const dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const headers=dayNames.map(d=>`<div class="cal-day-hdr">${d}</div>`).join('');
+
+  let cells='';
+  for(let i=0;i<firstDay;i++) cells+=`<div class="cal-day other-month"><div class="day-num">&nbsp;</div></div>`;
+  const today=new Date();
+  for(let d=1;d<=daysInMonth;d++){
+    const dateStr=`2026-06-${String(d).padStart(2,'0')}`;
+    const isToday=today.getFullYear()===2026&&today.getMonth()===5&&today.getDate()===d;
+    const posts=state.socialPosts.filter(p=>p.date===dateStr);
+    const postHtml=posts.map(p=>`<div class="cal-post ${p.channel}">${p.channel.toUpperCase()}: ${p.text.slice(0,28)}…</div>`).join('');
+    cells+=`<div class="cal-day ${isToday?'today':''}"><div class="day-num">${d}</div>${postHtml}</div>`;
+  }
+
+  const schedTable=state.socialPosts.map(p=>`<tr>
+    <td>${p.date}</td>
+    <td><span class="tag ${p.channel==='meta'?'tag-blue':p.channel==='ig'?'tag-amber':p.channel==='li'?'tag-green':'tag-red'}">${p.channel.toUpperCase()}</span></td>
+    <td>${p.text}</td>
+  </tr>`).join('');
+
+  return `
+<div class="page-title">📅 Social Calendar</div>
+<div class="page-sub">June 2026 — 13 scheduled posts across 4 channels</div>
+<div class="card">
+  <div class="cal-grid">${headers}${cells}</div>
+  <div style="display:flex;gap:12px;margin-top:12px;flex-wrap:wrap">
+    <span class="cal-post meta" style="font-size:11px">META</span>
+    <span class="cal-post ig" style="font-size:11px">INSTAGRAM</span>
+    <span class="cal-post li" style="font-size:11px">LINKEDIN</span>
+    <span class="cal-post yt" style="font-size:11px">YOUTUBE</span>
+  </div>
+</div>
+<div class="card mt-16">
+  <div class="card-title">📋 Post Schedule</div>
+  <div class="tbl-wrap">
+    <table><thead><tr><th>Date</th><th>Channel</th><th>Content</th></tr></thead><tbody>${schedTable}</tbody></table>
+  </div>
+</div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  TAB: REPORTS
+// ═══════════════════════════════════════════════════════
+function renderReports(){
+  const rows=state.clients.map(c=>{
+    const camps=state.campaigns.filter(cp=>cp.client===c.id);
+    const spend=camps.reduce((s,cp)=>s+cp.spend,0);
+    const rev=camps.reduce((s,cp)=>s+cp.revenue,0);
+    const roas=spend>0?(rev/spend).toFixed(2):'—';
+    const generated=!!state.generatedReports[c.id];
+    return `<tr>
+      <td class="fw-600">${c.name}</td>
+      <td>${c.industry}</td>
+      <td><span style="color:var(--success);font-weight:700">${c.health}</span>/100</td>
+      <td>${spend?fmtC(spend):'—'}</td>
+      <td><span style="font-weight:700;color:${roas>=4?'var(--success)':roas>=1.5?'var(--warning)':'var(--danger)'}">${roas?roas+'x':'—'}</span></td>
+      <td>${generated?`<span class="tag tag-green">Generated</span>`:`<span class="tag tag-muted">Pending</span>`}</td>
+      <td><button class="btn btn-brand btn-sm" onclick="runW4('${c.id}')">📊 Generate (W4)</button></td>
+    </tr>`;
+  }).join('');
+
+  return `
+<div class="page-title">📊 Reports</div>
+<div class="page-sub">AI-generated client performance reports (W4)</div>
+<div class="card">
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Client</th><th>Industry</th><th>Health</th><th>Total Spend</th><th>ROAS</th><th>Report</th><th>Action</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>
+</div>`;
+}
+
+function runW4(clientId){
+  const report=W4_generateReport(clientId);
+  if(!report)return;
+  openModal(`
+    <h2 style="margin-bottom:4px">📊 ${report.clientName} — Performance Report</h2>
+    <div class="text-xs text-muted" style="margin-bottom:16px">Generated ${new Date(report.generatedAt).toLocaleString('en-IN')}</div>
+    <div class="stat-grid" style="margin-bottom:16px">
+      <div class="stat-card"><div class="label">Total Spend</div><div class="val">${fmtC(report.totalSpend)}</div></div>
+      <div class="stat-card"><div class="label">Leads</div><div class="val">${fmt(report.totalLeads)}</div></div>
+      <div class="stat-card"><div class="label">Conversions</div><div class="val">${fmt(report.totalConv)}</div></div>
+      <div class="stat-card"><div class="label">ROAS</div><div class="val ${report.avgROAS>=4?'green':'amber'}">${report.avgROAS.toFixed(2)}x</div></div>
+      <div class="stat-card"><div class="label">CPL</div><div class="val">${fmtC(report.avgCPL)}</div></div>
+      <div class="stat-card"><div class="label">Retainer</div><div class="val">${fmtC(report.retainer)}/mo</div></div>
+    </div>
+    <div style="background:var(--surface2);border-radius:8px;padding:14px;font-size:13px;line-height:1.65;border:1px solid var(--border)">
+      <div class="text-xs fw-600 text-muted mb-8">AI SUMMARY (${aiMode==='heuristic'?'Heuristic Engine':'Claude API'})</div>
+      ${report.summary}
+    </div>
+    <div style="margin-top:16px;text-align:right"><button class="btn btn-brand" onclick="closeModal()">Close</button></div>
+  `);
+  go('reports');
+}
+
+// ═══════════════════════════════════════════════════════
+//  TAB: FINANCE
+// ═══════════════════════════════════════════════════════
+function renderFinance(){
+  const totalMRR=mrr();
+  const collected=state.invoices.filter(i=>i.status==='PAID').reduce((s,i)=>s+i.amount,0);
+  const outstanding=state.invoices.filter(i=>i.status!=='PAID').reduce((s,i)=>s+i.amount,0);
+  const expenses=[
+    {name:'Salaries (10 operators)',amount:450000},
+    {name:'Ad Tools & Ad-serving',amount:48000},
+    {name:'Studio & Rent (HSR Layout)',amount:85000},
+    {name:'Production & Freelancers',amount:62000}
+  ];
+  const totalExp=expenses.reduce((s,e)=>s+e.amount,0);
+  const profit=totalMRR-totalExp;
+
+  const invRows=state.invoices.map(i=>`<tr>
+    <td class="fw-600">${i.id}</td>
+    <td>${i.client}</td>
+    <td>${fmtC(i.amount)}</td>
+    <td>${i.due}</td>
+    <td>${statusTag(i.status)}</td>
+  </tr>`).join('');
+
+  const maxBar=Math.max(totalMRR,totalExp);
+  const mrrW=(totalMRR/maxBar*100).toFixed(1);
+  const expW=(totalExp/maxBar*100).toFixed(1);
+
+  const expRows=expenses.map(e=>`
+    <div style="margin-bottom:10px">
+      <div class="flex-between text-sm mb-4"><span>${e.name}</span><span class="fw-600">${fmtC(e.amount)}</span></div>
+      <div style="height:5px;background:var(--surface2);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${(e.amount/totalExp*100).toFixed(0)}%;background:var(--brand);border-radius:3px"></div>
+      </div>
+    </div>`).join('');
+
+  return `
+<div class="page-title">💰 Finance</div>
+<div class="page-sub">MRR, collections, expenses and P&L — ${todayStr()}</div>
+<div class="stat-grid mb-16">
+  <div class="stat-card"><div class="label">MRR</div><div class="val green">${fmtC(totalMRR)}</div><div class="sub">6 retainers</div></div>
+  <div class="stat-card"><div class="label">Collected</div><div class="val green">${fmtC(collected)}</div><div class="sub">This month</div></div>
+  <div class="stat-card"><div class="label">Outstanding</div><div class="val amber">${fmtC(outstanding)}</div><div class="sub">${state.invoices.filter(i=>i.status!=='PAID').length} invoices</div></div>
+  <div class="stat-card"><div class="label">Total Expenses</div><div class="val">${fmtC(totalExp)}</div><div class="sub">Monthly</div></div>
+  <div class="stat-card"><div class="label">Net Profit</div><div class="val ${profit>0?'green':'red'}">${fmtC(profit)}</div><div class="sub">Margin ${((profit/totalMRR)*100).toFixed(0)}%</div></div>
+</div>
+
+<div class="two-col">
+  <div class="card">
+    <div class="card-title">🧾 Invoices</div>
+    <div class="tbl-wrap">
+      <table><thead><tr><th>Invoice</th><th>Client</th><th>Amount</th><th>Due Date</th><th>Status</th></tr></thead>
+      <tbody>${invRows}</tbody></table>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">📊 MRR vs Expenses</div>
+    <div style="margin-bottom:14px">
+      <div class="flex-between text-sm mb-4"><span>MRR</span><span class="fw-600 text-muted" style="color:var(--success)">${fmtC(totalMRR)}</span></div>
+      <div style="height:8px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="height:100%;width:${mrrW}%;background:var(--success);border-radius:4px"></div></div>
+    </div>
+    <div style="margin-bottom:20px">
+      <div class="flex-between text-sm mb-4"><span>Expenses</span><span class="fw-600" style="color:var(--danger)">${fmtC(totalExp)}</span></div>
+      <div style="height:8px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="height:100%;width:${expW}%;background:var(--danger);border-radius:4px"></div></div>
+    </div>
+    <div class="card-title">Expense Breakdown</div>
+    ${expRows}
+  </div>
+</div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  TAB: TEAM & OPS
+// ═══════════════════════════════════════════════════════
+function renderTeam(){
+  const disciplineColors={ST:'var(--brand-text)',PM:'var(--info)',CR:'var(--warning)',CW:'var(--success)',WB:'var(--muted)',AN:'var(--danger)'};
+
+  // Auto-assign tasks from projects
+  state.team.forEach(op=>{
+    op.tasks=state.projects.filter(p=>p.discipline===op.code&&p.stage!=='Approved').map(p=>({title:p.title,stage:p.stage,client:p.client}));
+  });
+
+  const rows=state.team.map(op=>`<tr>
+    <td>
+      <div class="flex">
+        <div style="width:32px;height:32px;border-radius:50%;background:${disciplineColors[op.code]}20;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:${disciplineColors[op.code]};flex-shrink:0">${op.name.split(' ').map(w=>w[0]).join('')}</div>
+        <div>
+          <div class="fw-600" style="cursor:pointer" onclick="renameOp('${op.id}')">${op.name} ✏️</div>
+          <div class="text-xs text-muted">${op.discipline}</div>
+        </div>
+      </div>
+    </td>
+    <td><span class="tag" style="background:${disciplineColors[op.code]}18;color:${disciplineColors[op.code]}">${op.code}</span></td>
+    <td>${op.loginTime}</td>
+    <td>${op.hours}h</td>
+    <td><span class="tag tag-green">${op.status}</span></td>
+    <td style="font-size:12px;max-width:220px">${op.report}</td>
+    <td style="font-size:12px">
+      ${op.tasks.length>0?op.tasks.map(t=>`<div style="margin-bottom:3px"><span class="tag tag-muted" style="font-size:10px">${t.stage}</span> ${t.title}</div>`).join(''):'<span class="text-muted">No active tasks</span>'}
+    </td>
+  </tr>`).join('');
+
+  return `
+<div class="page-title">👥 Team & Ops</div>
+<div class="page-sub">10 operators across 6 disciplines — click a name to rename</div>
+<div class="card">
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Operator</th><th>Code</th><th>Login</th><th>Hours</th><th>Status</th><th>Daily Report</th><th>Active Tasks</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>
+</div>`;
+}
+
+function renameOp(opId){
+  const op=state.team.find(t=>t.id===opId);
+  if(!op)return;
+  const newName=prompt(`Rename operator (current: ${op.name}):`,op.name);
+  if(newName&&newName.trim()&&newName!==op.name){
+    op.name=newName.trim();
+    addActivity(`Operator renamed to ${op.name}`,'ops');
+    go('team');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  TAB: AI STUDIO
+// ═══════════════════════════════════════════════════════
+function renderAI(){
+  const tools=[
+    {icon:'📊',title:'Client Report',desc:'Generate a full KPI + narrative report for any client.',btn:'Generate',action:`openClientPicker()`},
+    {icon:'🌐',title:'Cross-Client Summary',desc:'Blended agency performance snapshot across all 6 retainers.',btn:'Run',action:`runCrossClientSummary()`},
+    {icon:'🎯',title:'Lead Scorer',desc:'Re-score all inbound leads with updated heuristics.',btn:'Run',action:`runLeadScorer()`},
+    {icon:'⏱️',title:'Delay Prediction',desc:'Flag projects at risk of missing their due dates.',btn:'Scan',action:`runDelayPrediction()`},
+    {icon:'📝',title:'Meeting Notes',desc:'Paste call transcript → extract action items and summary.',btn:'Open',action:`openMeetingNotes()`},
+    {icon:'🚨',title:'Anomaly Scan',desc:'Run W5 — overspend, low ROAS, idle hot leads, overdue invoices.',btn:'Scan (W5)',action:`runAnomalyScan()`}
+  ];
+  const cards=tools.map(t=>`
+    <div class="service-card" style="display:flex;flex-direction:column;gap:8px">
+      <div style="font-size:24px">${t.icon}</div>
+      <div class="service-title">${t.title}</div>
+      <div class="service-desc" style="flex:1">${t.desc}</div>
+      <button class="btn btn-brand btn-sm" onclick="${t.action}">${t.btn}</button>
+    </div>`).join('');
+
+  return `
+<div class="page-title">🤖 AI Studio</div>
+<div class="page-sub">One-click intelligence tools powered by Webfluence's heuristic engine</div>
+<div class="card mb-16">
+  <div class="card-title">AI Engine Mode</div>
+  <div class="toggle-wrap">
+    <span>Heuristic (offline)</span>
+    <label class="toggle"><input type="checkbox" id="ai-toggle" ${aiMode==='claude'?'checked':''} onchange="toggleAIMode(this)"><span class="toggle-slider"></span></label>
+    <span>Claude API</span>
+    ${aiMode==='claude'?`<span class="tag tag-amber" style="margin-left:4px">Requires ANTHROPIC_API_KEY</span>`:''}
+  </div>
+  <div class="text-xs text-muted mt-16">Heuristic mode always runs offline. Toggle to Claude API when an API key is configured — never hard-fails.</div>
+</div>
+<div class="services-grid">${cards}</div>`;
+}
+
+function toggleAIMode(el){
+  aiMode=el.checked?'claude':'heuristic';
+  document.getElementById('ai-mode-label').textContent=aiMode==='claude'?'Claude API':'Heuristic AI';
+  document.querySelector('#ai-pill .dot').style.background=aiMode==='claude'?'var(--brand)':'var(--success)';
+  go('ai');
+}
+
+function openClientPicker(){
+  const opts=state.clients.map(c=>`<button class="btn btn-sm" style="margin:4px" onclick="runW4('${c.id}');closeModal()">${c.name}</button>`).join('');
+  openModal(`<h2 style="margin-bottom:12px">Select Client for Report</h2>${opts}`);
+}
+
+function runCrossClientSummary(){
+  const totalMRR=mrr();
+  const totalSpend=state.campaigns.reduce((s,c)=>s+c.spend,0);
+  const totalRev=state.campaigns.reduce((s,c)=>s+c.revenue,0);
+  const totalLeads=state.campaigns.reduce((s,c)=>s+c.leads,0);
+  const avgROAS=(totalRev/totalSpend).toFixed(2);
+  const avgHealth=(state.clients.reduce((s,c)=>s+c.health,0)/state.clients.length).toFixed(0);
+  openModal(`
+    <h2 style="margin-bottom:12px">🌐 Cross-Client Agency Summary</h2>
+    <div class="stat-grid mb-16">
+      <div class="stat-card"><div class="label">MRR</div><div class="val green">${fmtC(totalMRR)}</div></div>
+      <div class="stat-card"><div class="label">Blended ROAS</div><div class="val">${avgROAS}x</div></div>
+      <div class="stat-card"><div class="label">Total Leads</div><div class="val">${fmt(totalLeads)}</div></div>
+      <div class="stat-card"><div class="label">Avg Health</div><div class="val">${avgHealth}/100</div></div>
+    </div>
+    <div style="background:var(--surface2);border-radius:8px;padding:14px;font-size:13px;line-height:1.65;border:1px solid var(--border)">
+      Webfluence is managing ${state.clients.length} active retainers with a combined MRR of ${fmtC(totalMRR)}. Blended ROAS across all campaigns stands at ${avgROAS}x against a target of 4.8x. Average account health is ${avgHealth}/100. ${state.campaigns.find(c=>cMetrics(c).overspend)?'⚠️ One campaign is currently overspent — immediate bid review recommended.':''} ${state.invoices.find(i=>i.status==='OVERDUE')?'🚨 One invoice is overdue — follow up with the collections process.':'All invoices are on track.'}
+    </div>
+    <div style="margin-top:16px;text-align:right"><button class="btn btn-brand" onclick="closeModal()">Close</button></div>
+  `);
+  addActivity('Cross-client summary generated','ops');
+}
+
+function runLeadScorer(){
+  state.leads.forEach(l=>{const s=W1_scoreLead(l);l.score=s.score;l.lifecycle=s.lifecycle;l.owner=s.owner;});
+  addActivity('Lead scorer re-run — all enquiries rescored','lead');
+  openModal(`<h2 style="margin-bottom:12px">🎯 Lead Scorer</h2><p>${state.leads.length} leads rescored. ${state.leads.filter(l=>l.score>=75).length} SQL, ${state.leads.filter(l=>l.score>=50&&l.score<75).length} MQL, ${state.leads.filter(l=>l.score<50).length} LEAD.</p><br><button class="btn btn-brand" onclick="closeModal()">Done</button>`);
+}
+
+function runDelayPrediction(){
+  const today=new Date();
+  const atRisk=state.projects.filter(p=>{
+    const due=new Date(p.due);
+    const daysLeft=(due-today)/86400000;
+    return daysLeft<5&&p.stage!=='Approved';
+  });
+  const html=atRisk.length>0?atRisk.map(p=>`<div class="alert alert-warning">⏱️ <strong>${p.title}</strong> — due ${p.due} · currently in ${p.stage}</div>`).join(''):`<div class="alert alert-success">✅ No projects at immediate risk of delay.</div>`;
+  openModal(`<h2 style="margin-bottom:12px">⏱️ Delay Prediction</h2>${html}<div style="margin-top:16px;text-align:right"><button class="btn btn-brand" onclick="closeModal()">Close</button></div>`);
+  addActivity('Delay prediction scan complete','ops');
+}
+
+function openMeetingNotes(){
+  openModal(`
+    <h2 style="margin-bottom:12px">📝 Meeting Notes Extractor</h2>
+    <div class="form-field mb-16"><label>Paste call transcript</label><textarea id="notes-input" style="width:100%;height:120px;border:1px solid var(--border);border-radius:6px;padding:8px;resize:vertical"></textarea></div>
+    <button class="btn btn-brand" onclick="extractNotes()">Extract Action Items</button>
+  `);
+}
+function extractNotes(){
+  const txt=document.getElementById('notes-input').value;
+  if(!txt){return;}
+  const lines=txt.split('\n').filter(l=>l.length>10).slice(0,5);
+  const items=lines.map((l,i)=>`<li style="margin-bottom:4px">Action ${i+1}: ${l.slice(0,80)}…</li>`).join('');
+  document.getElementById('modal-content').innerHTML=`<h2 style="margin-bottom:12px">📝 Extracted Action Items</h2><ul style="padding-left:20px;font-size:13px;line-height:1.8">${items||'<li>No clear action items found — try a longer transcript.</li>'}</ul><div style="margin-top:16px;text-align:right"><button class="btn btn-brand" onclick="closeModal()">Done</button></div>`;
+  addActivity('Meeting notes processed and action items extracted','ops');
+}
+
+function runAnomalyScan(){
+  const alerts=W5_checkAnomalies();
+  const html=alerts.map(a=>`<div class="alert alert-${a.type}">${a.type==='danger'?'🚨':a.type==='warning'?'⚠️':'✅'} ${a.msg}</div>`).join('');
+  openModal(`<h2 style="margin-bottom:12px">🚨 W5 Anomaly Scan Results</h2>${html}<div style="margin-top:16px;text-align:right"><button class="btn btn-brand" onclick="closeModal()">Close</button></div>`);
+}
+
+// ═══════════════════════════════════════════════════════
+//  TAB: SERVICES
+// ═══════════════════════════════════════════════════════
+function renderServices(){
+  const services=[
+    {icon:'📈',title:'Performance Marketing',desc:'Full-funnel paid media strategy across search, social and video.'},
+    {icon:'🔍',title:'Google Ads & PPC',desc:'Search, Shopping, YouTube and Display campaigns built for ROI.'},
+    {icon:'📱',title:'Meta & Instagram Ads',desc:'Precision targeting and creative-led campaigns on Meta platforms.'},
+    {icon:'💼',title:'LinkedIn Ads',desc:'B2B demand generation — MQLs, pipeline, and brand authority.'},
+    {icon:'🌱',title:'Organic SEO & Content',desc:'Authority-building content clusters and technical SEO audits.'},
+    {icon:'🎨',title:'Brand & Creative',desc:'In-house design, motion and copy that converts at every touchpoint.'},
+    {icon:'🌐',title:'Web & Landing Pages',desc:'CRO-first landing pages built to reduce CPL and lift conversion rate.'},
+    {icon:'📊',title:'Analytics & Attribution',desc:'Server-side GA4, multi-touch attribution, and lifecycle tracking.'},
+    {icon:'⚙️',title:'CRO & Automation',desc:'A/B testing, heatmaps and lifecycle automation for every retainer.'}
+  ];
+  const cards=services.map(s=>`<div class="service-card"><div class="service-icon">${s.icon}</div><div class="service-title">${s.title}</div><div class="service-desc">${s.desc}</div></div>`).join('');
+
+  const steps=[
+    {n:1,title:'Audit & Baseline',desc:'We audit your funnel, tracking, and creative — establish real benchmarks before spending a rupee.'},
+    {n:2,title:'Strategy & Build',desc:'Channel mix, audience architecture, and creative brief — built for your specific CAC targets.'},
+    {n:3,title:'Ship & Test (Week 1)',desc:'First campaigns live. 7-day sprint testing structure starts immediately.'},
+    {n:4,title:'Scale & Compound',desc:'Winners scaled, losers paused. Weekly reviews, monthly P&L-level reporting.'}
+  ];
+  const stepCards=steps.map(s=>`<div class="card" style="text-align:center"><div style="width:36px;height:36px;border-radius:50%;background:var(--brand);color:#0a0a0c;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;margin:0 auto 10px">${s.n}</div><div class="service-title">${s.title}</div><div class="service-desc">${s.desc}</div></div>`).join('');
+
+  return `
+<div class="page-title">🚀 Services</div>
+<div class="page-sub">9 integrated capabilities — one accountable studio</div>
+<div class="services-grid mb-16">${cards}</div>
+<div class="page-title" style="font-size:16px;margin-bottom:4px">Our 4-Step Growth Framework</div>
+<div class="page-sub">How we take a brand from audit to 4x ROAS</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">${stepCards}</div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  TAB: INDUSTRIES
+// ═══════════════════════════════════════════════════════
+function renderIndustries(){
+  const industries=[
+    {icon:'🏗️',name:'Real Estate',desc:'Project launches, site-visit leads, NRI campaigns.'},
+    {icon:'🏥',name:'Healthcare',desc:'Appointment bookings, OPD funnels, specialist awareness.'},
+    {icon:'💳',name:'Fintech',desc:'Loan leads, credit card signups, approved-CPL optimisation.'},
+    {icon:'✈️',name:'Travel & Hospitality',desc:'Direct bookings, resort revenue, package lead-gen.'},
+    {icon:'💻',name:'B2B & SaaS',desc:'MQL pipelines, demo bookings, LinkedIn authority.'},
+    {icon:'🛒',name:'Food & D2C',desc:'First-order CAC, repeat purchase, UGC-led social.'},
+    {icon:'📚',name:'EdTech',desc:'Trial signups, demo-to-enrol funnels, course performance.'},
+    {icon:'🛍️',name:'E-Commerce',desc:'ROAS-first Shopping campaigns, retargeting, CLV.'}
+  ];
+  const cards=industries.map(i=>`<div class="ind-card"><div class="ind-icon">${i.icon}</div><div class="ind-title">${i.name}</div><div class="ind-desc">${i.desc}</div></div>`).join('');
+  return `
+<div class="page-title">🏭 Industries</div>
+<div class="page-sub">8 sectors — 13 years of vertical-specific expertise</div>
+<div class="industries-grid">${cards}</div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  TAB: STUDIO
+// ═══════════════════════════════════════════════════════
+function renderStudio(){
+  const history=[
+    {year:2012,event:'Studio founded in Bangalore (Indiranagar).'},
+    {year:2014,event:'First real-estate engagement — project sells out in 8 months, 30% faster than benchmark.'},
+    {year:2017,event:'Photography, motion and copy move in-house.'},
+    {year:2019,event:'Performance + brand integrated; avg client tenure crosses 3 years.'},
+    {year:2022,event:'Analytics stack: server-side tracking, GA4, lifecycle tooling on every retainer.'},
+    {year:2026,event:'Ten operators, eight industries, one accountable studio.'}
+  ];
+  const tlItems=history.map(h=>`<div class="tl-item"><div class="tl-dot"></div><div class="tl-year">${h.year}</div><div class="tl-text">${h.event}</div></div>`).join('');
+
+  const principles=[
+    'Numbers before narratives — every recommendation grounded in funnel data, attribution and CAC.',
+    'One accountable studio — strategy, performance media, creative and analytics under one roof; one team, one P&L, one Slack channel.',
+    'Ship weekly, learn faster — 7-day testing cycles and weekly reviews.'
+  ];
+  const prList=principles.map((p,i)=>`<div style="display:flex;gap:12px;margin-bottom:12px"><div style="width:24px;height:24px;border-radius:50%;background:var(--brand);color:#0a0a0c;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0">${i+1}</div><div style="font-size:13px;line-height:1.6">${p}</div></div>`).join('');
+
+  return `
+<div class="page-title">✨ Studio</div>
+<div class="page-sub">Webfluence Marketing Solutions Pvt. Ltd. — Bangalore's finest performance & brand studio</div>
+
+<div class="two-col mb-16">
+  <div class="card">
+    <div class="card-title">Our Story</div>
+    <div style="font-size:13px;line-height:1.75;color:var(--text)">Founded in 2012 in Indiranagar, Webfluence was built by operators who were tired of agencies that sold decks and delivered excuses. Thirteen years later, we are 10 people, 8 industries, and one accountable studio — where strategy, performance media, creative and analytics live under one roof. Every campaign we run is owned end-to-end: one team, one P&L, one Slack channel. No hand-offs, no blame games.</div>
+    <hr class="divider">
+    <div class="card-title">Our Principles</div>
+    ${prList}
+  </div>
+  <div>
+    <div class="card">
+      <div class="card-title">Studio Timeline</div>
+      <div class="timeline">${tlItems}</div>
+    </div>
+    <div class="card mt-16">
+      <div class="card-title">Contact</div>
+      <div style="font-size:13px;line-height:2">
+        <div>📍 2nd Floor, Krishna Complex, Vanganahalli, 1st Sector, HSR Layout, Bengaluru 560102</div>
+        <div>📞 <a href="tel:+918050363647">+91 80503 63647</a></div>
+        <div>✉️ <a href="mailto:Hello@webfluence.in">Hello@webfluence.in</a></div>
+        <div>💬 <a href="https://wa.me/918050363647" target="_blank">WhatsApp</a></div>
+      </div>
+      <hr class="divider">
+      <div style="font-size:12px;color:var(--muted)">instagram.com/webfluencemarketing · linkedin.com/company/webfluence-marketing-solutions · youtube.com/@Webfluenceofficial · facebook.com/Webfluence-Marketing-Solutions</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title flex-between">
+    <span>🤖 AI Engine Toggle</span>
+  </div>
+  <div class="toggle-wrap">
+    <span>Heuristic (offline, always works)</span>
+    <label class="toggle"><input type="checkbox" id="studio-ai-toggle" ${aiMode==='claude'?'checked':''} onchange="toggleAIMode(this)"><span class="toggle-slider"></span></label>
+    <span>Claude API</span>
+  </div>
+  <div class="text-xs text-muted" style="margin-top:8px">When set to Claude API, W4 reports and AI Studio tools will attempt to call the Anthropic Claude API. Configure ANTHROPIC_API_KEY in your environment. The engine never hard-fails — it gracefully falls back.</div>
+</div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  LEAD CAPTURE FORM (shared)
+// ═══════════════════════════════════════════════════════
+function leadCaptureForm(context){
+  const sectors=['Real Estate','Healthcare','Fintech','Travel & Hospitality','B2B & SaaS','Food & D2C','EdTech','E-Commerce'];
+  const services=['Performance Marketing (Google & Meta)','SEO & Content','Brand & Creative','Web & Landing Pages','Social Media','End-to-end Marketing'];
+  const budgets=['Under ₹1L','₹1L – ₹5L','₹5L – ₹20L','₹20L+'];
+  const sources=['Inbound Website','Referral','LinkedIn','Instagram DM','Google Search','Cold Outreach'];
+
+  return `<form onsubmit="submitLead(event,'${context}')">
+    <div class="form-grid">
+      <div class="form-field"><label>Full Name *</label><input required name="name" placeholder="Rajesh Kumar"></div>
+      <div class="form-field"><label>Company *</label><input required name="company" placeholder="Acme Realty"></div>
+      <div class="form-field"><label>Sector *</label><select required name="sector"><option value="">Select sector…</option>${sectors.map(s=>`<option>${s}</option>`).join('')}</select></div>
+      <div class="form-field"><label>Service Interested In *</label><select required name="service"><option value="">Select service…</option>${services.map(s=>`<option>${s}</option>`).join('')}</select></div>
+      <div class="form-field"><label>Monthly Budget *</label><select required name="budget"><option value="">Select budget…</option>${budgets.map(b=>`<option>${b}</option>`).join('')}</select></div>
+      <div class="form-field"><label>Source</label><select name="source">${sources.map(s=>`<option>${s}</option>`).join('')}</select></div>
+      <div class="form-field form-full"><label>Notes</label><textarea name="notes" rows="2" placeholder="Brief context…"></textarea></div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+      <button type="submit" class="btn btn-brand">⚡ Capture Lead (W1)</button>
+      <span class="text-xs text-muted">Auto-scored · lifecycle tagged · deal created if score ≥50</span>
+    </div>
+  </form>`;
+}
+
+function submitLead(e,context){
+  e.preventDefault();
+  const fd=new FormData(e.target);
+  const data={name:fd.get('name'),company:fd.get('company'),sector:fd.get('sector'),service:fd.get('service'),budget:fd.get('budget'),source:fd.get('source'),notes:fd.get('notes')};
+  const lead=W1_captureLead(data);
+  e.target.reset();
+  openModal(`
+    <h2 style="margin-bottom:12px">⚡ Lead Captured — W1 Complete</h2>
+    <div class="stat-grid mb-16">
+      <div class="stat-card"><div class="label">AI Score</div><div class="val ${lead.score>=75?'green':lead.score>=50?'':'amber'}">${lead.score}</div></div>
+      <div class="stat-card"><div class="label">Lifecycle</div><div class="val" style="font-size:16px">${lead.lifecycle}</div></div>
+      <div class="stat-card"><div class="label">Owner</div><div class="val" style="font-size:14px">${lead.owner.split(' ')[0]}</div></div>
+    </div>
+    <div class="alert ${lead.score>=50?'alert-success':'alert-info'}">${lead.score>=50?'✅ Deal auto-created and added to pipeline.':'ℹ️ Score < 50 — added to leads list. Nurture sequence queued.'}</div>
+    <div style="margin-top:16px;text-align:right"><button class="btn btn-brand" onclick="closeModal();go('leads')">View Pipeline</button></div>
+  `);
+}
+
+// ═══════════════════════════════════════════════════════
+//  BIND TAB-SPECIFIC EVENTS
+// ═══════════════════════════════════════════════════════
+function bindTabEvents(tab){
+  // Nothing extra needed — events use inline onclick for now
+}
+
+// ═══════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════
+go('dashboard');
+</script>
+</body>
+</html>
