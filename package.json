@@ -1,0 +1,10 @@
+{
+  "name": "webfluence-crm",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Marketing-first CRM for webfluence.in — zero npm deps",
+  "scripts": {
+    "start": "node --experimental-sqlite src/server.js",
+    "demo":  "node --experimental-sqlite src/demo.js"
+  }
+}
