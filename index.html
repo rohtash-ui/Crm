@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>WebFlow OS 0.26 — Webfluence Command Web</title>
+<style>
+  :root{
+    --bg:#f6f7f9;--surface:#ffffff;--surface2:#f2f3f6;--border:#e5e7ec;
+    --muted:#6b7280;--fg:#16181d;--brand:#f5b50c;--brand2:#a9760a;--brandsoft:rgba(245,181,12,.16);
+    --web:rgba(245,181,12,.06);--web2:rgba(245,181,12,.14);
+    --success:#15a06a;--warning:#b9770f;--danger:#d83a3a;--info:#2f74d0;--purple:#6f4ff0;
+    --font:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--bg);color:var(--fg);font-family:var(--font);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  ::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px}
+  /* web background */
+  #webbg{display:none}
+  .app{display:flex;min-height:100vh;position:relative;z-index:1}
+  .sidebar{width:244px;flex-shrink:0;border-right:1px solid var(--border);background:#fbfbfc;padding:18px 12px;display:flex;flex-direction:column;position:relative;overflow:hidden}
+  .sidebar .corner{position:absolute;top:-30px;right:-30px;width:120px;height:120px;opacity:.4;pointer-events:none}
+  .logo{display:flex;align-items:center;gap:11px;padding:0 8px 4px;position:relative;z-index:2}
+  .logo .mark{height:40px;width:40px;border-radius:12px;background:radial-gradient(circle at 30% 30%,var(--brand2),var(--brand));display:grid;place-items:center;font-weight:800;color:#0a0a0c;font-size:16px;box-shadow:0 0 16px rgba(245,181,12,.5)}
+  .logo .nm{font-weight:700;letter-spacing:-.2px}
+  .logo .ver{font-size:10px;color:var(--brand2);font-weight:600}
+  .logo small{display:block;color:var(--muted);font-size:11px}
+  .nav{display:flex;flex-direction:column;gap:2px;margin-top:14px;position:relative;z-index:2}
+  .nav .grp{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#5f5866;padding:12px 12px 5px}
+  .nav button{display:flex;align-items:center;gap:11px;border:0;background:transparent;color:var(--muted);font-size:13px;padding:8px 12px;border-radius:10px;cursor:pointer;text-align:left;width:100%;font-family:inherit;position:relative}
+  .nav button:hover{background:var(--surface2);color:var(--fg)}
+  .nav button.active{background:var(--brandsoft);color:var(--brand2);font-weight:600}
+  .nav button.active::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--brand)}
+  .nav .ic{width:18px;text-align:center;font-size:13px;opacity:.95}
+  .sidefoot{margin-top:auto;border:1px solid var(--border);background:var(--surface2);border-radius:10px;padding:11px;font-size:11.5px;color:var(--muted);position:relative;z-index:2}
+  .sidefoot b{color:var(--fg);display:block;margin-bottom:2px}
+  main{flex:1;overflow-x:hidden;min-width:0}
+  header.top{position:sticky;top:0;z-index:20;border-bottom:1px solid var(--border);background:rgba(255,255,255,.88);backdrop-filter:blur(9px);padding:14px 24px}
+  .top-row{display:flex;align-items:center;justify-content:space-between}
+  header.top h1{font-size:18px;font-weight:600}
+  header.top p{font-size:12px;color:var(--muted)}
+  .pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:12px}
+  .dot{height:8px;width:8px;border-radius:50%}
+  .iconbtn{border:1px solid var(--border);background:var(--surface);border-radius:10px;padding:8px 11px;cursor:pointer;color:var(--fg);font-family:inherit}
+  .iconbtn:hover{background:var(--surface2)}
+  .wrap{padding:22px 24px;display:flex;flex-direction:column;gap:18px}
+  .grid{display:grid;gap:15px}
+  .stats{grid-template-columns:repeat(6,1fr)}
+  @media(max-width:1150px){.stats{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:680px){.stats{grid-template-columns:repeat(2,1fr)}}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;position:relative}
+  .card.web::after{content:"";position:absolute;top:0;right:0;width:74px;height:74px;background-image:radial-gradient(circle at 100% 0,transparent 30%,var(--web) 31%,transparent 33%),radial-gradient(circle at 100% 0,transparent 48%,var(--web) 49%,transparent 51%),radial-gradient(circle at 100% 0,transparent 66%,var(--web) 67%,transparent 69%);pointer-events:none;border-radius:0 14px 0 0}
+  .stat{overflow:hidden;padding:15px 16px;animation:fade .4s ease-out}
+  .stat .lab{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);display:flex;align-items:center;gap:6px}
+  .stat .val{font-size:23px;font-weight:700;margin-top:5px;font-variant-numeric:tabular-nums}
+  .stat .sub{font-size:11px;color:var(--muted);margin-top:2px}
+  .stat .ic{color:var(--brand2)}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .actions{display:flex;flex-wrap:wrap;gap:8px}
+  .abtn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border);background:var(--surface);border-radius:10px;padding:9px 14px;font-size:13px;cursor:pointer;color:var(--fg);font-family:inherit}
+  .abtn:hover{background:var(--surface2);border-color:var(--brand)}
+  .abtn.primary{background:var(--brand);border-color:var(--brand);color:#0a0a0c;font-weight:600}
+  .cols{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+  @media(max-width:1000px){.cols{grid-template-columns:1fr}}
+  .colstack{display:flex;flex-direction:column;gap:16px}
+  .ctitle{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:14px;font-weight:600;padding:14px 18px;border-bottom:1px solid var(--border)}
+  .ctitle .ic{color:var(--brand2);margin-right:6px}
+  .pad{padding:18px}
+  .bars{display:flex;align-items:flex-end;gap:13px;height:188px;padding:8px 4px 0}
+  .bar{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end}
+  .bar .fill{width:100%;border-radius:6px 6px 0 0;transition:height .6s ease}
+  .bar .cap{font-size:11px;color:var(--muted);text-align:center;line-height:1.2}
+  .bar .rv{font-size:11px;font-weight:700}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:9px 16px;font-weight:500}
+  tbody td{padding:10px 16px;border-top:1px solid var(--border)}
+  tbody tr:hover{background:var(--surface2)}
+  .tablescroll{overflow-x:auto}
+  .good{color:var(--success)}.bad{color:var(--danger)}.warnc{color:var(--warning)}.mut{color:var(--muted)}.b{font-weight:600}
+  .tag{display:inline-block;font-size:11px;padding:2px 9px;border-radius:999px;border:1px solid var(--border);background:var(--surface2);white-space:nowrap}
+  .tag.orange{color:var(--brand2);border-color:rgba(245,181,12,.5);background:var(--brandsoft)}
+  .tag.green{color:var(--success);border-color:rgba(39,192,138,.35)}
+  .tag.amber{color:var(--warning);border-color:rgba(245,166,35,.35)}
+  .tag.red{color:var(--danger);border-color:rgba(239,68,68,.35)}
+  .tag.blue{color:var(--info);border-color:rgba(74,163,255,.35)}
+  .tag.purple{color:var(--purple);border-color:rgba(160,123,255,.35)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .fld{width:100%;border:1px solid var(--border);background:var(--surface2);color:var(--fg);border-radius:10px;padding:9px 12px;font-size:13px;font-family:inherit;outline:none}
+  .fld:focus{border-color:var(--brand)}
+  .submit{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--brand);color:#0a0a0c;border:0;border-radius:10px;padding:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:10px}
+  .scoreout{margin-top:10px;border:1px solid var(--border);background:var(--surface2);border-radius:10px;padding:12px;font-size:13px;animation:fade .35s}
+  .scoreout .row{display:flex;justify-content:space-between;align-items:center}
+  .scoreout .big{font-size:18px;font-weight:800}
+  .alert{display:flex;gap:8px;border:1px solid var(--border);background:var(--surface2);border-radius:10px;padding:10px;font-size:12px;margin-bottom:8px}
+  .feed .ev{display:flex;gap:11px;font-size:12px;margin-bottom:11px}
+  .feed .ev .d{height:6px;width:6px;border-radius:50%;background:var(--brand);margin-top:5px;flex-shrink:0}
+  .feed .ev .t{color:var(--muted);margin-top:2px}
+  .demo-banner{position:relative;z-index:2;background:var(--brandsoft);border-bottom:1px solid var(--border);color:var(--brand2);font-size:12px;padding:7px 24px;text-align:center}
+  .demo-banner b{color:var(--fg)}
+  .overlay{position:fixed;inset:0;background:rgba(20,24,33,.45);display:none;align-items:center;justify-content:center;z-index:60;padding:20px}
+  .overlay.open{display:flex}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;max-width:580px;width:100%;padding:24px;animation:fade .25s;max-height:88vh;overflow:auto}
+  .modal h3{font-size:16px;margin-bottom:4px}
+  .modal .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
+  .modal .kpi{background:var(--surface2);border-radius:10px;padding:12px}
+  .modal .kpi .l{font-size:11px;color:var(--muted)}
+  .modal .kpi .v{font-size:18px;font-weight:700;margin-top:2px}
+  .modal .summary{font-size:13px;line-height:1.65;background:var(--surface2);border-radius:10px;padding:14px}
+  select.fld{appearance:none}
+  .sech{font-size:15px;font-weight:600}.secsub{font-size:12px;color:var(--muted)}
+  .kb{display:grid;grid-template-columns:repeat(4,1fr);gap:13px}
+  @media(max-width:900px){.kb{grid-template-columns:repeat(2,1fr)}}
+  .kcol{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px;min-height:110px}
+  .kcol h4{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:10px;display:flex;justify-content:space-between}
+  .kcard{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px;margin-bottom:9px;cursor:pointer;transition:border-color .15s}
+  .kcard:hover{border-color:var(--brand)}
+  .kcard .ttl{font-size:12.5px;font-weight:600;margin-bottom:6px}
+  .kcard .meta{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--muted)}
+  .av{height:22px;width:22px;border-radius:50%;background:var(--brandsoft);color:var(--brand2);display:inline-grid;place-items:center;font-size:10px;font-weight:700}
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .cal .dow{font-size:11px;color:var(--muted);text-align:center;padding:4px 0}
+  .cell{background:var(--surface);border:1px solid var(--border);border-radius:9px;min-height:72px;padding:6px;font-size:11px}
+  .cell .dn{color:var(--muted);font-size:11px}
+  .cell.out{opacity:.3}
+  .post{margin-top:4px;font-size:10px;padding:2px 5px;border-radius:6px;background:var(--brandsoft);color:var(--brand2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .post.green{background:rgba(39,192,138,.16);color:var(--success)}
+  .post.amber{background:rgba(245,166,35,.16);color:var(--warning)}
+  .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:900px){.tiles{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:600px){.tiles{grid-template-columns:1fr}}
+  .tile{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;transition:border-color .15s;position:relative;overflow:hidden}
+  .tile:hover{border-color:var(--brand)}
+  .tile.clickable{cursor:pointer}
+  .tile .ti{height:34px;width:34px;border-radius:9px;background:var(--brandsoft);color:var(--brand2);display:grid;place-items:center;font-weight:700;margin-bottom:10px;font-size:15px}
+  .tile h4{font-size:13.5px;margin-bottom:4px}
+  .tile p{font-size:12px;color:var(--muted);line-height:1.5}
+  .toggle{display:inline-flex;align-items:center;gap:8px;cursor:pointer}
+  .sw{width:38px;height:22px;border-radius:999px;background:var(--surface2);border:1px solid var(--border);position:relative;transition:.2s}
+  .sw::after{content:"";position:absolute;top:2px;left:2px;height:16px;width:16px;border-radius:50%;background:var(--muted);transition:.2s}
+  .sw.on{background:var(--brand);border-color:var(--brand)}.sw.on::after{left:18px;background:#0a0a0c}
+  .rowline{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 0;border-top:1px solid var(--border);font-size:13px}
+  .timeline{position:relative;padding-left:22px}
+  .timeline::before{content:"";position:absolute;left:6px;top:4px;bottom:4px;width:2px;background:linear-gradient(var(--brand),transparent)}
+  .tl{position:relative;padding:0 0 16px 4px}
+  .tl::before{content:"";position:absolute;left:-19px;top:3px;width:11px;height:11px;border-radius:50%;background:var(--brand);box-shadow:0 0 10px var(--brand)}
+  .tl .yr{font-size:12px;color:var(--brand2);font-weight:700}
+  .tl .tt{font-size:13.5px;font-weight:600;margin:2px 0}
+  .tl p{font-size:12px;color:var(--muted);line-height:1.5}
+</style>
+</head>
+<body>
+<svg id="webbg" preserveAspectRatio="none" viewBox="0 0 1440 900" xmlns="http://www.w3.org/2000/svg"></svg>
+<div class="demo-banner">Live demo — <b>WebFlow OS 0.26</b> · Webfluence Command Web. 100% real webfluence.in data. Every tab works — a clean, friendly view of the whole studio.</div>
+<div class="app">
+  <aside class="sidebar">
+    <svg class="corner" viewBox="0 0 100 100"><g fill="none" stroke="var(--web2)" stroke-width="1"><path d="M100 0 L0 100 M100 0 L40 100 M100 0 L100 60 M100 0 L70 100"/><path d="M100 0 Q60 20 30 90 M100 0 Q75 30 55 95 M100 0 Q88 14 78 88"/></g></svg>
+    <div class="logo">
+      <div class="mark">Wf</div>
+      <div><div class="nm">WebFlow OS</div><span class="ver">v0.26</span><small>webfluence.in</small></div>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="sidefoot"><b>The web is organised.</b>W1–W5 automations live · 95% hands-off</div>
+  </aside>
+  <main>
+    <header class="top">
+      <div class="top-row">
+      <div><h1 id="ttl">Command Web</h1><p id="sub">The whole studio, on one thread</p></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="pill"><span class="dot" id="aidot" style="background:var(--warning)"></span> <span id="aimode">AI: heuristic</span></span>
+        <span class="pill">Rohtash · Founder</span>
+        <button class="iconbtn" onclick="go(TAB)" title="Reload">&#8635;</button>
+      </div>
+      </div>
+    </header>
+    <div class="wrap" id="view"></div>
+  </main>
+</div>
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()"><div class="modal" id="modal"></div></div>
+<script>
+/* ===================== REAL WEBFLUENCE DATA (from webfluence.in) ===================== */
+const AGENCY={name:"Webfluence Marketing Solutions Pvt. Ltd.",since:2012,city:"Bengaluru",
+  addr:"2nd Floor, Krishna Complex, Vanganahalli, 1st Sector, HSR Layout, Bengaluru, Karnataka 560102",
+  phone:"+91 80503 63647",email:"Hello@webfluence.in",wa:"https://wa.me/918050363647",
+  ig:"instagram.com/webfluencemarketing",li:"linkedin.com/company/webfluence-marketing-solutions",
+  yt:"youtube.com/@Webfluenceofficial",fb:"facebook.com/Webfluence-Marketing-Solutions"};
+const STATS={brands:30,rating:4.9,years:13,roas:4.8,leadGrowth:340,campaigns:200,industries:8,operators:10};
+
+/* Real clients — drawn from webfluence.in testimonials & case results */
+const clients=[
+  {id:"mavenn",name:"Mavenn Realty",industry:"Real Estate",contact:"Satyam · CEO",result:"Site-visit cost down 38% in 90 days",retainer:160000,health:88,color:"#ff5a1f"},
+  {id:"nambiyar",name:"Nambiyar Builder",industry:"Real Estate",contact:"Ashutosh · Owner",result:"1,200+ leads on flagship project in Q1",retainer:185000,health:91,color:"#f97316"},
+  {id:"gyn",name:"The Gyn Next Door",industry:"Healthcare",contact:"Dr. Sharanya · Sr. Gynaecologist",result:"Booked appointments up 46%",retainer:85000,health:84,color:"#27c08a"},
+  {id:"homies",name:"Homies",industry:"Fintech · Loans",contact:"Bhargav · CEO",result:"Approved-loan CPL down 32% at scale",retainer:130000,health:79,color:"#4aa3ff"},
+  {id:"ichain",name:"iChain (Singapore)",industry:"B2B & SaaS",contact:"Suresh · Founder",result:"India MQLs now 38% of pipeline",retainer:210000,health:82,color:"#a07bff"},
+  {id:"nextfoot",name:"Next Footstep",industry:"Real Estate",contact:"Ravi Tripathi · CEO",result:"Lead quality 2× in the first quarter",retainer:115000,health:77,color:"#ff8a55"},
+];
+/* Real-estate brands Webfluence has scaled (logo wall on site) */
+const BRANDS=["Godrej Properties","Prestige Group","Mahindra Lifespace","Lodha Group","Sattva Group","Brigade Enterprises","Sobha Developers","Adani Realty"];
+
+const rnd=(a,b)=>a+Math.random()*(b-a);
+function metrics(budget,spend){
+  const impressions=Math.round(spend*rnd(55,95));
+  const clicks=Math.round(impressions*rnd(.013,.03));
+  const leads=Math.round(clicks*rnd(.09,.18));
+  const conversions=Math.round(leads*rnd(.24,.5));
+  const revenue=Math.round(conversions*rnd(5000,11000));
+  return {budget,spend,impressions,clicks,leads,conversions,revenue,
+    cpc:clicks?spend/clicks:0,cpl:leads?spend/leads:0,cpa:conversions?spend/conversions:0,
+    roas:spend?revenue/spend:0,ctr:impressions?clicks/impressions*100:0};
+}
+/* Campaigns mapped to real clients, real channels, results consistent with site claims */
+let campaigns=[
+  {id:"cm1",client:"nambiyar",name:"Flagship Launch · Meta Lead Gen",channel:"META",...metrics(220000,238000)},
+  {id:"cm2",client:"nambiyar",name:"Project Search · Google",channel:"GOOGLE",...metrics(150000,131000)},
+  {id:"cm3",client:"mavenn",name:"Site-Visit Drive · Meta",channel:"META",...metrics(140000,121000)},
+  {id:"cm4",client:"mavenn",name:"Brand+Intent · Google",channel:"GOOGLE",...metrics(90000,77000)},
+  {id:"cm5",client:"gyn",name:"Appointments · Google Local",channel:"GOOGLE",...metrics(70000,63000)},
+  {id:"cm6",client:"homies",name:"Approved-Loan · Google Search",channel:"GOOGLE",...metrics(120000,109000)},
+  {id:"cm7",client:"ichain",name:"India ABM · LinkedIn",channel:"LINKEDIN",...metrics(160000,138000)},
+  {id:"cm8",client:"nextfoot",name:"Quality Leads · Meta",channel:"META",...metrics(95000,84000)},
+];
+const DAY=864e5,now=Date.now();
+
+/* Inbound enquiries via the webfluence.in contact form — using the site's real service + budget options */
+const SERVICES_FORM=["Performance Marketing (Google & Meta)","SEO & Content","Brand & Creative","Web & Landing Pages","Social Media","End-to-end Marketing"];
+const BUDGETS=["Under ₹1L","₹1L – ₹5L","₹5L – ₹20L","₹20L+"];
+const SECTORS=["Real Estate","Healthcare","Fintech","Travel & Hospitality","B2B & SaaS","Food & D2C","EdTech","E-Commerce"];
+let contacts=[
+  {id:"e1",name:"Real Estate enquiry",company:"HSR developer",sector:"Real Estate",svc:"End-to-end Marketing",source:"WEBSITE",budgetBand:"₹20L+",budget:2000000,score:86,reason:"high-value real-estate, end-to-end scope (heuristic)",stage:"SQL",owner:"Strategy",last:now-4*DAY},
+  {id:"e2",name:"Healthcare enquiry",company:"Bangalore clinic",sector:"Healthcare",svc:"Performance Marketing (Google & Meta)",source:"WEBSITE",budgetBand:"₹1L – ₹5L",budget:300000,score:62,reason:"inbound, solid budget, patient acquisition (heuristic)",stage:"MQL",owner:"Performance",last:now-1*DAY},
+  {id:"e3",name:"EdTech enquiry",company:"Study-abroad brand",sector:"EdTech",svc:"SEO & Content",source:"WEBSITE",budgetBand:"₹5L – ₹20L",budget:900000,score:71,reason:"inbound, mid-large budget (heuristic)",stage:"MQL",owner:"Strategy",last:now-6*DAY},
+  {id:"e4",name:"D2C enquiry",company:"Cloud-kitchen brand",sector:"Food & D2C",svc:"Social Media",source:"WHATSAPP",budgetBand:"Under ₹1L",budget:75000,score:38,reason:"small budget, social-only (heuristic)",stage:"LEAD",owner:"Performance",last:now-2*DAY},
+];
+/* Deals — WON are real client engagements; open deals are on-brand inbound by sector */
+let deals=[
+  {id:"d1",title:"Nambiyar Builder — retainer",stage:"WON",value:185000,owner:"Strategy"},
+  {id:"d2",title:"Mavenn Realty — retainer",stage:"WON",value:160000,owner:"Strategy"},
+  {id:"d3",title:"iChain — India ABM retainer",stage:"WON",value:210000,owner:"Performance"},
+  {id:"d4",title:"Real Estate · End-to-end · ₹20L+",stage:"NEGOTIATION",value:2000000,owner:"Strategy"},
+  {id:"d5",title:"EdTech · SEO & Content · ₹5L–₹20L",stage:"PROPOSAL_SENT",value:900000,owner:"Strategy"},
+  {id:"d6",title:"Healthcare · Performance · ₹1L–₹5L",stage:"CONTACTED",value:300000,owner:"Performance"},
+];
+const KCOLS=[["PENDING","Backlog"],["IN_PROGRESS","In Progress"],["REVIEW","Review"],["APPROVED","Approved"]];
+let tasks=[
+  {id:"t1",title:"Nambiyar — flagship launch creatives (12)",client:"nambiyar",who:"CR",pri:"URGENT",status:"IN_PROGRESS"},
+  {id:"t2",title:"Mavenn — site-visit landing page (CRO)",client:"mavenn",who:"WB",pri:"HIGH",status:"REVIEW"},
+  {id:"t3",title:"Homies — approved-loan ad copy refresh",client:"homies",who:"CW",pri:"HIGH",status:"PENDING"},
+  {id:"t4",title:"Gyn Next Door — Google Local profile + posts",client:"gyn",who:"PM",pri:"MEDIUM",status:"IN_PROGRESS"},
+  {id:"t5",title:"iChain — LinkedIn ABM audience build",client:"ichain",who:"PM",pri:"HIGH",status:"REVIEW"},
+  {id:"t6",title:"Next Footstep — monthly performance report",client:"nextfoot",who:"AN",pri:"MEDIUM",status:"APPROVED"},
+  {id:"t7",title:"Mavenn — walkthrough reel (motion)",client:"mavenn",who:"CR",pri:"MEDIUM",status:"PENDING"},
+  {id:"t8",title:"Homies — GA4 + server-side tracking QA",client:"homies",who:"AN",pri:"HIGH",status:"IN_PROGRESS"},
+  {id:"t9",title:"Mavenn — QBR deck & 90-day blueprint",client:"mavenn",who:"ST",pri:"HIGH",status:"IN_PROGRESS"},
+  {id:"t10",title:"iChain — account plan & forecast",client:"ichain",who:"ST",pri:"MEDIUM",status:"REVIEW"},
+];
+/* Team — 10 operators across 6 disciplines (names not public on site, so by discipline) */
+let team=[
+  {id:"o1",name:"Operator 1",role:"Strategy & Accounts Lead",code:"ST",status:"PRESENT",login:"09:30",hours:7.8,report:"Mavenn QBR prep · Nambiyar blueprint review"},
+  {id:"o2",name:"Operator 2",role:"Strategy & Accounts",code:"ST",status:"PRESENT",login:"09:48",hours:7.2,report:"Next Footstep report sign-off · 3 client calls"},
+  {id:"o3",name:"Operator 3",role:"Performance Media — Google",code:"PM",status:"PRESENT",login:"09:35",hours:8.1,report:"Homies loan-search optimisation · CPL review"},
+  {id:"o4",name:"Operator 4",role:"Performance Media — Meta",code:"PM",status:"PRESENT",login:"09:40",hours:7.9,report:"Nambiyar flagship Meta scaling · budget caps"},
+  {id:"o5",name:"Operator 5",role:"Performance Media — LinkedIn",code:"PM",status:"REMOTE",login:"10:05",hours:6.6,report:"iChain India ABM audience build"},
+  {id:"o6",name:"Operator 6",role:"Creative — Design",code:"CR",status:"PRESENT",login:"09:55",hours:7.4,report:"Nambiyar launch creatives (12)"},
+  {id:"o7",name:"Operator 7",role:"Creative — Motion / Video",code:"CR",status:"PRESENT",login:"10:00",hours:7.0,report:"Mavenn walkthrough reel edit v2"},
+  {id:"o8",name:"Operator 8",role:"Content & SEO",code:"CW",status:"PRESENT",login:"09:50",hours:7.1,report:"Homies ad-copy refresh · Gyn blogs x2"},
+  {id:"o9",name:"Operator 9",role:"Web & CRO",code:"WB",status:"PRESENT",login:"09:38",hours:7.6,report:"Mavenn site-visit landing page"},
+  {id:"o10",name:"Operator 10",role:"Analytics & Attribution",code:"AN",status:"REMOTE",login:"10:10",hours:6.9,report:"Homies GA4 server-side QA · dashboards"},
+];
+const DISCIPLINES=6;
+/* Social content for real clients across the 4 platforms on site */
+let socialPosts=[
+  {client:"nambiyar",platform:"Instagram",day:3,status:"PUBLISHED",cap:"Flagship launch teaser"},
+  {client:"mavenn",platform:"Instagram",day:7,status:"SCHEDULED",cap:"Open-house this weekend"},
+  {client:"ichain",platform:"LinkedIn",day:9,status:"APPROVED",cap:"India growth case study"},
+  {client:"gyn",platform:"Facebook",day:12,status:"DRAFT",cap:"Women's health Q&A"},
+  {client:"nambiyar",platform:"YouTube",day:16,status:"SCHEDULED",cap:"Project walkthrough"},
+  {client:"homies",platform:"Instagram",day:19,status:"PUBLISHED",cap:"Loan approved in 48h"},
+  {client:"mavenn",platform:"Instagram",day:23,status:"DRAFT",cap:"Buyer testimonial reel"},
+  {client:"nextfoot",platform:"LinkedIn",day:26,status:"SCHEDULED",cap:"Investor update"},
+];
+let invoices=[
+  {no:"WF-2026-014",client:"nambiyar",amount:185000,status:"SENT",due:now+9*DAY},
+  {no:"WF-2026-013",client:"homies",amount:130000,status:"OVERDUE",due:now-5*DAY},
+  {no:"WF-2026-012",client:"ichain",amount:210000,status:"PAID",due:now-18*DAY},
+  {no:"WF-2026-011",client:"mavenn",amount:160000,status:"PAID",due:now-22*DAY},
+  {no:"WF-2026-010",client:"gyn",amount:85000,status:"PAID",due:now-25*DAY},
+];
+let expenses=[{cat:"Salaries (10 operators)",amount:520000},{cat:"Ad tools & ad-serving",amount:64000},{cat:"Studio & rent (HSR)",amount:110000},{cat:"Production & freelancers",amount:72000}];
+let reports=[];
+let activities=[
+  {type:"seed",detail:"Command Web initialised with live Webfluence accounts",at:now-3*DAY},
+  {type:"client_won",detail:"iChain (Singapore) — India ABM retainer signed",at:now-2*DAY},
+  {type:"report_generated",detail:"Monthly report shipped to Mavenn Realty",at:now-1*DAY},
+];
+let AIREAL=false;
+
+/* Services & industries — verbatim categories from webfluence.in */
+const SERVICES=[
+  ["◈","Performance Marketing","Google & Meta auctions run before sunrise — industry-leading ROAS, relentless optimisation."],
+  ["▤","Google Ads & PPC","Search, Shopping & YouTube campaigns; live in 72 hours, continuous A/B optimisation."],
+  ["◇","Meta & Instagram Ads","Lead gen and retargeting that move pipeline, not just impressions."],
+  ["▦","LinkedIn Ads","High-value B2B lead gen and ABM for long-cycle enterprise deals."],
+  ["▣","Organic SEO & Content","Technical SEO, content and authority in competitive markets."],
+  ["✦","Brand & Creative","In-house design, motion & photography — end-to-end from one Slack channel."],
+  ["▥","Web & Landing","Conversion-first web design and landing pages."],
+  ["◉","Analytics & Attribution","GA4, server-side tracking and lifecycle tooling on every retainer."],
+  ["⚙","CRO & Automation","Funnel re-engineering and marketing automation that compounds."],
+];
+const INDUSTRIES=[
+  ["Real Estate","Luxury residential, commercial, plotted — buyer journey from teaser launch to RERA-grade closures."],
+  ["Healthcare","Patient acquisition at the lowest cost per appointment for hospitals, clinics & diagnostics."],
+  ["Fintech","Compliant, high-trust campaigns that cut through noise in competitive financial markets."],
+  ["Travel & Hospitality","Visually-led campaigns tuned to seasonal demand that drive bookings."],
+  ["B2B & SaaS","High-value lead gen via LinkedIn, content and ABM for long-cycle deals."],
+  ["Food & D2C","Loyal customer bases and repeat-purchase loops for cloud kitchens and D2C."],
+  ["EdTech","Course enrollments, admissions and brand authority in competitive education markets."],
+  ["E-Commerce","ROAS-obsessed campaigns across Google Shopping, Meta and marketplaces."],
+];
+const PRINCIPLES=[
+  ["Numbers before narratives","Every recommendation grounded in funnel data, attribution and the cost of the next customer."],
+  ["One accountable studio","Strategy, performance media, creative and analytics under one roof — one team, one P&L, one Slack channel."],
+  ["Ship weekly, learn faster","Seven-day testing cycles and weekly reviews — the only optimisation that compounds is the one already live."],
+];
+const HISTORY=[
+  ["2012","Studio founded in Bangalore","First floor in Indiranagar — small studio, performance-led, founder-accountable."],
+  ["2014","First real-estate engagement","A residential project sells out in 8 months — 30% faster than the developer's benchmark."],
+  ["2017","In-house creative & production","Photography, motion and copy move in-house; end-to-end campaigns from one Slack channel."],
+  ["2019","Performance + brand, integrated","Retainers span paid, organic and creative as one workstream; avg tenure crosses 3 years."],
+  ["2022","Analytics & attribution stack","Server-side tracking, GA4 and lifecycle tooling on every retainer."],
+  ["2026","Today","Ten operators · eight industries · one accountable studio."],
+];
+const PROCESS=[
+  ["Discovery & Audit","Ad accounts, SEO crawl, competitor gap analysis, audience persona mapping."],
+  ["Strategy & Blueprint","Custom 90-day roadmap built for your exact goals and budget."],
+  ["Launch & Execute","Campaigns live and tracking active within 72 hours of sign-off."],
+  ["Optimise & Scale","Weekly testing, refinements and scaling — results compound monthly."],
+];
+/* ===================== HELPERS ===================== */
+const NAV=[
+  ["⊕","Command Web","dashboard","Command Web","The whole studio, on one thread","CORE"],
+  ["◇","Clients","clients","Clients","Live Webfluence accounts","CORE"],
+  ["◆","Leads & Pipeline","leads","Leads & Pipeline","Inbound from webfluence.in","CORE"],
+  ["◈","Performance Ads","campaigns","Performance Marketing","Google · Meta · LinkedIn tracking","DELIVERY"],
+  ["▤","Projects","projects","Projects","Studio work across disciplines","DELIVERY"],
+  ["▦","Social Calendar","social","Social Calendar","Scheduled & published content","DELIVERY"],
+  ["▣","Reports","reports","Client Reports","AI performance summaries","DELIVERY"],
+  ["▥","Finance","finance","Finance","Retainers, invoices, profit","OPS"],
+  ["◉","Team & Ops","team","Team & Ops","10 operators · 6 disciplines","OPS"],
+  ["✦","AI Studio","ai","AI Studio","One-click agency AI","OPS"],
+  ["⊛","Services","services","Services & Capabilities","What Webfluence offers","STUDIO"],
+  ["❖","Industries","industries","Industries","Sector expertise","STUDIO"],
+  ["✸","Studio","studio","The Studio","Story, principles, contact","STUDIO"],
+];
+const inr=n=>"₹"+Math.round(n||0).toLocaleString("en-IN");
+const num=n=>Math.round(n||0).toLocaleString("en-IN");
+const cname=id=>{const c=clients.find(c=>c.id===id);return c?c.name:id;};
+function log(type,detail){activities.unshift({type,detail,at:Date.now()});}
+function priTag(p){const m={URGENT:"red",HIGH:"orange",MEDIUM:"amber",LOW:"blue"};return '<span class="tag '+m[p]+'">'+p+'</span>';}
+function chTag(ch){const m={META:"blue",GOOGLE:"orange",LINKEDIN:"purple",YOUTUBE:"red",SEO:"green"};return '<span class="tag '+(m[ch]||"")+'">'+ch+'</span>';}
+function statTag(s){const m={PUBLISHED:"green",SCHEDULED:"blue",APPROVED:"orange",DRAFT:"",PAID:"green",SENT:"blue",OVERDUE:"red",PRESENT:"green",REMOTE:"blue",LEAVE:"amber",WON:"green",NEGOTIATION:"orange",PROPOSAL_SENT:"blue",CONTACTED:"amber",NEW_LEAD:""};return '<span class="tag '+(m[s]||"")+'">'+s.replace(/_/g," ")+'</span>';}
+
+/* ===================== AUTOMATIONS (W1,W3,W4,W5) ===================== */
+function scoreLead(l){
+  let s=30;const r=[];const src=(l.source||"").toUpperCase();
+  if(src.includes("REFERRAL")){s+=28;r.push("referral");}
+  else if(src.includes("WEBSITE")){s+=14;r.push("inbound website");}
+  else if(src.includes("WHATSAPP")){s+=10;r.push("WhatsApp enquiry");}
+  else if(src.includes("ADS")){s+=10;r.push("paid lead");}
+  const b=+l.budget||0;
+  if(b>=2000000){s+=30;r.push("₹20L+ budget");}
+  else if(b>=500000){s+=22;r.push("₹5L–₹20L budget");}
+  else if(b>=100000){s+=14;r.push("₹1L–₹5L budget");}
+  else if(b>0){s+=5;r.push("sub-₹1L budget");}
+  if(["Real Estate","Healthcare","B2B & SaaS","Fintech"].includes(l.sector)){s+=8;r.push("core sector ("+l.sector+")");}
+  if((l.svc||"").includes("End-to-end")){s+=8;r.push("end-to-end scope");}
+  s=Math.max(0,Math.min(100,s));
+  return {score:s,reason:(r.join(", ")||"baseline")+(AIREAL?" (Claude)":" (heuristic)")};
+}
+function capture(e){
+  e.preventDefault();
+  const f=Object.fromEntries(new FormData(e.target).entries());
+  const band=f.budgetBand;const budgetMap={"Under ₹1L":75000,"₹1L – ₹5L":300000,"₹5L – ₹20L":900000,"₹20L+":2000000};
+  f.budget=budgetMap[band]||0;
+  const sc=scoreLead(f);const score=sc.score,reason=sc.reason;
+  const stage=score>=75?"SQL":score>=50?"MQL":"LEAD";
+  const owner=(f.svc||"").includes("LinkedIn")||f.sector==="B2B & SaaS"?"Performance":"Strategy";
+  contacts.unshift({id:"e"+Date.now(),name:(f.sector||"New")+" enquiry",company:f.company||"website",sector:f.sector,svc:f.svc,source:f.source,budgetBand:band,budget:f.budget,score,reason,stage,owner,last:Date.now()});
+  log("lead_captured","Scored "+score+" ("+stage+") — "+f.sector+" · "+band);
+  log("nurture_enqueued","Nurture step 1 queued (+24h) — auto-reply within 4 business hours");
+  let dealMade=false;
+  if(score>=50){deals.unshift({id:"d"+Date.now(),title:f.sector+" · "+(f.svc||"").split(" (")[0]+" · "+band,stage:"NEW_LEAD",value:f.budget,owner});log("deal_created","Auto-created deal ("+inr(f.budget)+")");dealMade=true;}
+  window.__lastScore={score,reason,stage,owner,dealMade};
+  go(TAB);return false;
+}
+function lastScoreBox(){
+  const r=window.__lastScore;if(!r)return"";
+  return '<div class="scoreout"><div class="row"><span class="mut">Last AI lead score</span><span class="big '+(r.score>=75?'good':r.score>=50?'warnc':'mut')+'">'+r.score+'/100 · '+r.stage+'</span></div><p class="mut" style="margin-top:4px;font-size:12px">'+r.reason+'</p><p style="margin-top:4px;font-size:12px">Routed to <b>'+r.owner+'</b> · nurture queued'+(r.dealMade?" · deal created":"")+'</p></div>';
+}
+function runSync(){
+  campaigns.forEach(c=>{
+    const day=Math.min(c.budget*rnd(.04,.1),c.budget*.12);
+    const di=Math.round(day*rnd(40,90)),dc=Math.round(di*rnd(.01,.03)),dl=Math.round(dc*rnd(.08,.18)),dv=Math.round(dl*rnd(.24,.5));
+    c.spend+=day;c.impressions+=di;c.clicks+=dc;c.leads+=dl;c.conversions+=dv;c.revenue+=dv*rnd(5000,11000);
+    c.cpc=c.clicks?c.spend/c.clicks:0;c.cpl=c.leads?c.spend/c.leads:0;c.cpa=c.conversions?c.spend/c.conversions:0;
+    c.roas=c.spend?c.revenue/c.spend:0;c.ctr=c.impressions?c.clicks/c.impressions*100:0;
+  });
+  log("campaigns_synced","Synced "+campaigns.length+" campaigns (simulated daily delivery)");go(TAB);
+}
+function clientKpis(id){
+  const cs=campaigns.filter(c=>c.client===id);
+  const spend=cs.reduce((a,c)=>a+c.spend,0),revenue=cs.reduce((a,c)=>a+c.revenue,0);
+  const leads=cs.reduce((a,c)=>a+c.leads,0),conv=cs.reduce((a,c)=>a+c.conversions,0);
+  return {spend,revenue,leads,conv,roas:spend?revenue/spend:0,n:cs.length};
+}
+function runReport(id){
+  const cl=clients.find(c=>c.id===id)||clients[0];const k=clientKpis(cl.id);
+  const verdict=k.roas>=3?"strong":k.roas>=1.5?"healthy":"below target";
+  const summary=cl.name+" ("+cl.industry+") delivered "+verdict+" performance: "+inr(k.spend)+" spend produced "+inr(k.revenue)+" revenue ("+k.roas.toFixed(2)+"x blended ROAS) and "+num(k.leads)+" leads across "+k.n+" campaigns. Headline win on record: "+cl.result+". "+(k.roas<1.5?"ROAS is under the 1.5x floor — cap the weakest line and refresh creative this week. ":"Scale the top-ROAS line while holding CPL steady. ")+"Next: lock next month's budget split in the Friday review."+(AIREAL?" (Claude)":" (heuristic summary)");
+  reports.unshift({client:cl.id,at:Date.now(),summary,k});
+  log("report_generated","Monthly report for "+cl.name);showReport(reports[0]);
+}
+function showReport(r){
+  const cl=clients.find(c=>c.id===r.client);
+  document.getElementById("modal").innerHTML='<h3>'+cl.name+' — monthly report</h3><p class="mut" style="font-size:12px">'+cl.industry+' · '+cl.contact+' · '+new Date(r.at).toLocaleDateString("en-IN")+'</p><div class="kpis"><div class="kpi"><div class="l">Spend</div><div class="v">'+inr(r.k.spend)+'</div></div><div class="kpi"><div class="l">Revenue</div><div class="v">'+inr(r.k.revenue)+'</div></div><div class="kpi"><div class="l">Blended ROAS</div><div class="v '+(r.k.roas>=1.5?'good':'bad')+'">'+r.k.roas.toFixed(2)+'x</div></div><div class="kpi"><div class="l">Leads</div><div class="v">'+num(r.k.leads)+'</div></div><div class="kpi"><div class="l">Conversions</div><div class="v">'+num(r.k.conv)+'</div></div><div class="kpi"><div class="l">Campaigns</div><div class="v">'+r.k.n+'</div></div></div><div class="summary">'+r.summary+'</div><button class="abtn" style="margin-top:16px;float:right" onclick="closeModal()">Close</button>';
+  document.getElementById("overlay").classList.add("open");
+}
+function closeModal(){document.getElementById("overlay").classList.remove("open");go(TAB);}
+function anomalies(){
+  const a=[];
+  campaigns.forEach(c=>{
+    if(c.spend>c.budget)a.push({sev:"HIGH",msg:cname(c.client)+" · "+c.name+": spend "+inr(c.spend)+" over budget "+inr(c.budget)});
+    if(c.spend>0&&c.roas<1.5)a.push({sev:"MED",msg:cname(c.client)+" · "+c.name+": ROAS "+c.roas.toFixed(2)+"x below 1.5x floor"});
+  });
+  contacts.forEach(l=>{if(l.score>=70&&Date.now()-l.last>3*DAY)a.push({sev:"MED",msg:'Hot lead "'+l.name+'" (score '+l.score+') idle 3+ days'});});
+  invoices.forEach(i=>{if(i.status==="OVERDUE")a.push({sev:"HIGH",msg:cname(i.client)+": invoice "+i.no+" overdue ("+inr(i.amount)+")"});});
+  return a;
+}
+function runAlerts(){log("anomalies_checked",anomalies().length+" alert(s) raised");go("dashboard");}
+function advanceTask(id){const order=["PENDING","IN_PROGRESS","REVIEW","APPROVED"];const t=tasks.find(x=>x.id===id);if(!t)return;const i=order.indexOf(t.status);t.status=order[Math.min(i+1,order.length-1)];log("task_moved",t.title+" → "+t.status.replace("_"," "));go(TAB);}
+function renameMember(id){const m=team.find(x=>x.id===id);if(!m)return;const n=prompt("Real name for "+m.role+":",m.name);if(n&&n.trim()){m.name=n.trim();log("team_updated",m.role+" → "+m.name);go("team");}}
+function toggleAI(){AIREAL=!AIREAL;document.getElementById("aimode").textContent="AI: "+(AIREAL?"Claude":"heuristic");document.getElementById("aidot").style.background=AIREAL?"var(--success)":"var(--warning)";log("settings_changed","AI engine → "+(AIREAL?"Claude":"heuristic"));go(TAB);}
+
+/* ===================== GLOBAL STATS ===================== */
+function stats(){
+  const spend=campaigns.reduce((a,c)=>a+c.spend,0),revenue=campaigns.reduce((a,c)=>a+c.revenue,0);
+  const leads=campaigns.reduce((a,c)=>a+c.leads,0);
+  const pipe=deals.filter(d=>["WON","LOST"].indexOf(d.stage)<0).reduce((a,d)=>a+d.value,0);
+  const outstanding=invoices.filter(i=>i.status!=="PAID").reduce((a,i)=>a+i.amount,0);
+  const won=deals.filter(d=>d.stage==="WON").length,closed=deals.filter(d=>["WON","LOST"].indexOf(d.stage)>=0).length;
+  return {clients:clients.length,pipe,deals:deals.length,spend,revenue,leads,roas:spend?revenue/spend:0,outstanding,win:closed?Math.round(won/closed*100):67};
+}
+function statCards(arr){return arr.map(c=>'<div class="card web stat"><div class="lab">'+(c[4]?'<span class="ic">'+c[4]+'</span>':'')+c[0]+'</div><div class="val">'+c[1]+'</div>'+(c[2]?'<div class="sub">'+c[2]+'</div>':"")+'</div>').join("");}
+function roasBars(list){
+  const maxR=Math.max.apply(null,list.map(c=>c.roas).concat([1]));
+  return list.map(c=>{const h=Math.max(6,c.roas/maxR*100);const col=c.roas>=1.5?"var(--brand)":"var(--danger)";
+    return '<div class="bar"><div class="rv" style="color:'+col+'">'+c.roas.toFixed(1)+'x</div><div class="fill" style="height:'+h+'%;background:'+col+'"></div><div class="cap">'+cname(c.client).split(" ")[0]+'</div></div>';}).join("");
+}
+function campRows(list){return list.map(c=>'<tr><td class="b">'+c.name+'</td><td class="mut">'+cname(c.client)+'</td><td>'+chTag(c.channel)+'</td><td class="'+(c.spend>c.budget?'bad':'')+'">'+inr(c.spend)+'</td><td>'+num(c.leads)+'</td><td>'+inr(c.cpl)+'</td><td class="'+(c.roas>=1.5?'good':'bad')+'">'+c.roas.toFixed(2)+'x</td></tr>').join("");}
+function leadRows(list){return list.map(c=>{const scl=c.stage==="SQL"?"good":c.stage==="MQL"?"warnc":"mut";return '<tr><td class="b">'+c.sector+'</td><td class="mut">'+(c.svc||"").split(" (")[0]+'</td><td class="mut">'+(c.source||"")+'</td><td>'+c.budgetBand+'</td><td class="mut">'+c.owner+'</td><td class="'+scl+'">'+c.stage+'</td><td class="b">'+c.score+'</td></tr>';}).join("");}
+function feedHtml(){return activities.slice(0,12).map(a=>'<div class="ev"><div class="d"></div><div><div>'+a.detail+'</div><div class="t">'+a.type+' · '+new Date(a.at).toLocaleString("en-IN")+'</div></div></div>').join("");}
+function alertsHtml(){const al=anomalies();return al.length?al.map(a=>'<div class="alert"><span class="dot" style="margin-top:4px;background:'+(a.sev==="HIGH"?"var(--danger)":"var(--warning)")+'"></span><span>'+a.msg+'</span></div>').join(""):'<p class="mut" style="font-size:12px">All clear — the web is calm.</p>';}
+function captureForm(){return '<form onsubmit="return capture(event)"><div class="grid2"><select class="fld" name="sector">'+SECTORS.map(s=>'<option>'+s+'</option>').join("")+'</select><input class="fld" name="company" placeholder="Brand / company"><select class="fld" name="svc">'+SERVICES_FORM.map(s=>'<option>'+s+'</option>').join("")+'</select><select class="fld" name="budgetBand">'+BUDGETS.map(b=>'<option>'+b+'</option>').join("")+'</select><select class="fld" name="source"><option>WEBSITE</option><option>WHATSAPP</option><option>REFERRAL</option><option>META_ADS</option><option>GOOGLE_ADS</option></select><input class="fld" name="goal" placeholder="Goal (optional)"></div><button class="submit" type="submit">Capture &amp; auto-score enquiry (W1)</button></form>'+lastScoreBox();}
+/* ===================== VIEWS ===================== */
+const V={};
+V.dashboard=function(){
+  const s=stats();
+  return '<section class="grid stats">'+statCards([
+    ["Brands Scaled",STATS.brands+"+","since 2012","⊕"],["Avg ROAS",STATS.roas+"×","across retainers","◈"],
+    ["Avg Lead Growth",STATS.leadGrowth+"%","client average","◆"],["Client Rating",STATS.rating+"★","Google reviews","✦"],
+    ["Open Pipeline",inr(s.pipe),s.deals+" deals · "+s.win+"% win","▣"],["Outstanding",inr(s.outstanding),"invoices due","▥"]])+'</section>'+
+  '<section class="actions"><button class="abtn primary" onclick="runSync()">⟳ Sync campaigns (W3)</button><button class="abtn" onclick="runReport(\'mavenn\')">Generate report (W4)</button><button class="abtn" onclick="runAlerts()">Check anomalies (W5)</button><button class="abtn" onclick="go(\'clients\')">View accounts</button></section>'+
+  '<div class="cols"><div class="colstack">'+
+    '<div class="card web"><div class="ctitle"><span><span class="ic">◈</span>Blended ROAS by client campaign</span></div><div class="pad"><div class="bars">'+roasBars(campaigns)+'</div></div></div>'+
+    '<div class="card"><div class="ctitle">Campaign performance</div><div class="tablescroll"><table><thead><tr><th>Campaign</th><th>Client</th><th>Channel</th><th>Spend</th><th>Leads</th><th>CPL</th><th>ROAS</th></tr></thead><tbody>'+campRows(campaigns)+'</tbody></table></div></div>'+
+    '<div class="card"><div class="ctitle">Inbound pipeline (AI-scored)</div><div class="tablescroll"><table><thead><tr><th>Sector</th><th>Service</th><th>Source</th><th>Budget</th><th>Owner</th><th>Stage</th><th>Score</th></tr></thead><tbody>'+leadRows(contacts)+'</tbody></table></div></div>'+
+  '</div><div class="colstack">'+
+    '<div class="card web pad"><div class="sech">New enquiry</div><div class="secsub" style="margin-bottom:10px">From the webfluence.in contact form</div>'+captureForm()+'</div>'+
+    '<div class="card pad"><div class="sech" style="margin-bottom:10px">🕸️ Needs attention (the 5%)</div>'+alertsHtml()+'</div>'+
+    '<div class="card pad"><div class="sech" style="margin-bottom:10px">⚡ Activity feed</div><div class="feed">'+feedHtml()+'</div></div>'+
+  '</div></div>';
+};
+V.clients=function(){
+  const tot=clients.reduce((a,c)=>a+c.retainer,0);
+  return '<section class="grid stats" style="grid-template-columns:repeat(4,1fr)">'+statCards([
+    ["Active Accounts",clients.length,"on retainer","◇"],["Monthly Retainers",inr(tot),"recurring","▥"],
+    ["Avg Health","82","/100","✦"],["Brands Scaled",STATS.brands+"+","all-time","⊕"]])+'</section>'+
+  '<div class="tiles">'+clients.map(c=>'<div class="tile clickable" onclick="runReport(\''+c.id+'\')"><div class="ti" style="background:rgba(245,181,12,.16);color:'+c.color+'">'+c.name[0]+'</div><h4>'+c.name+'</h4><p style="margin-bottom:8px">'+c.industry+' · '+c.contact+'</p><div class="tag green" style="margin-bottom:8px">'+c.result+'</div><div class="rowline" style="border-top:1px solid var(--border);padding:8px 0 0"><span class="mut">Retainer</span><span class="b">'+inr(c.retainer)+'/mo</span></div><div class="rowline" style="padding:6px 0"><span class="mut">Health</span><span class="'+(c.health>=80?'good':'warnc')+'">'+c.health+'/100</span></div></div>').join("")+'</div>'+
+  '<div class="card"><div class="ctitle"><span><span class="ic">⊕</span>Real-estate brands Webfluence has scaled</span><span class="secsub">logo wall</span></div><div class="pad"><div style="display:flex;flex-wrap:wrap;gap:8px">'+BRANDS.map(b=>'<span class="tag orange">'+b+'</span>').join("")+'</div></div></div>';
+};
+V.leads=function(){
+  const sql=contacts.filter(c=>c.stage==="SQL").length,mql=contacts.filter(c=>c.stage==="MQL").length;
+  const pipe=deals.filter(d=>["WON","LOST"].indexOf(d.stage)<0).reduce((a,d)=>a+d.value,0);
+  const stages=[["NEW_LEAD","New"],["CONTACTED","Contacted"],["PROPOSAL_SENT","Proposal"],["NEGOTIATION","Negotiation"],["WON","Won"]];
+  return '<section class="grid stats" style="grid-template-columns:repeat(4,1fr)">'+statCards([
+    ["Inbound Leads",contacts.length,"website + WhatsApp","◆"],["SQL (hot)",sql,"score ≥ 75","✦"],
+    ["MQL",mql,"score 50–74","◇"],["Open Pipeline",inr(pipe),deals.length+" deals","▣"]])+'</section>'+
+  '<div class="cols"><div class="colstack">'+
+    '<div class="card"><div class="ctitle">Inbound enquiries (W1 auto-scored)</div><div class="tablescroll"><table><thead><tr><th>Sector</th><th>Service</th><th>Source</th><th>Budget</th><th>Owner</th><th>Stage</th><th>Score</th></tr></thead><tbody>'+leadRows(contacts)+'</tbody></table></div></div>'+
+    '<div class="card"><div class="ctitle">Deal pipeline</div><div class="pad"><div class="kb" style="grid-template-columns:repeat(5,1fr)">'+
+      stages.map(s=>{const ds=deals.filter(d=>d.stage===s[0]);return '<div class="kcol"><h4>'+s[1]+'<span>'+ds.length+'</span></h4>'+ds.map(d=>'<div class="kcard"><div class="ttl">'+d.title+'</div><div class="meta"><span>'+inr(d.value)+'</span><span class="av">'+d.owner.slice(0,2)+'</span></div></div>').join("")+'</div>';}).join("")+
+    '</div></div></div>'+
+  '</div><div class="colstack"><div class="card web pad"><div class="sech">New enquiry</div><div class="secsub" style="margin-bottom:10px">Live AI scoring + routing</div>'+captureForm()+'</div></div></div>';
+};
+V.campaigns=function(){
+  const byCh={};campaigns.forEach(c=>{byCh[c.channel]=byCh[c.channel]||{spend:0,rev:0,leads:0};byCh[c.channel].spend+=c.spend;byCh[c.channel].rev+=c.revenue;byCh[c.channel].leads+=c.leads;});
+  const s=stats();
+  return '<section class="grid stats" style="grid-template-columns:repeat(4,1fr)">'+statCards([
+    ["Total Spend",inr(s.spend),"this period","◈"],["Revenue",inr(s.revenue),"attributed","▣"],
+    ["Blended ROAS",s.roas.toFixed(2)+"x","",s.roas>=1.5?"✦":"◆"],["Leads",num(s.leads),"all campaigns","◆"]])+'</section>'+
+  '<section class="actions"><button class="abtn primary" onclick="runSync()">⟳ Sync campaigns (W3)</button><span class="mut" style="align-self:center;font-size:12px">Simulated daily delivery → recomputes CPC / CPL / CPA / ROAS</span></section>'+
+  '<div class="grid" style="grid-template-columns:repeat(4,1fr)">'+Object.keys(byCh).map(ch=>{const d=byCh[ch];const r=d.spend?d.rev/d.spend:0;return '<div class="card web stat"><div class="lab">'+ch+'</div><div class="val '+(r>=1.5?"good":"bad")+'">'+r.toFixed(2)+'x</div><div class="sub">'+inr(d.spend)+' · '+num(d.leads)+' leads</div></div>';}).join("")+'</div>'+
+  '<div class="card web"><div class="ctitle"><span><span class="ic">◈</span>ROAS by campaign</span></div><div class="pad"><div class="bars">'+roasBars(campaigns)+'</div></div></div>'+
+  '<div class="card"><div class="ctitle">All campaigns</div><div class="tablescroll"><table><thead><tr><th>Campaign</th><th>Client</th><th>Channel</th><th>Budget</th><th>Spend</th><th>Leads</th><th>CPL</th><th>ROAS</th></tr></thead><tbody>'+
+    campaigns.map(c=>'<tr><td class="b">'+c.name+'</td><td class="mut">'+cname(c.client)+'</td><td>'+chTag(c.channel)+'</td><td class="mut">'+inr(c.budget)+'</td><td class="'+(c.spend>c.budget?'bad':'')+'">'+inr(c.spend)+'</td><td>'+num(c.leads)+'</td><td>'+inr(c.cpl)+'</td><td class="'+(c.roas>=1.5?'good':'bad')+'">'+c.roas.toFixed(2)+'x</td></tr>').join("")+
+  '</tbody></table></div></div>';
+};
+V.projects=function(){
+  const cnt=s=>tasks.filter(t=>t.status===s).length;
+  return '<section class="grid stats" style="grid-template-columns:repeat(4,1fr)">'+statCards([
+    ["Active Tasks",tasks.length,"across 6 clients","▤"],["In Progress",cnt("IN_PROGRESS"),"","◈"],
+    ["In Review",cnt("REVIEW"),"awaiting approval","◇"],["Approved",cnt("APPROVED"),"","✦"]])+'</section>'+
+  '<div class="secsub">Click any card to advance it to the next stage. Codes: ST strategy · PM media · CR creative · CW content · WB web · AN analytics.</div>'+
+  '<div class="kb">'+KCOLS.map(col=>{const ts=tasks.filter(t=>t.status===col[0]);return '<div class="kcol"><h4>'+col[1]+'<span>'+ts.length+'</span></h4>'+ts.map(t=>'<div class="kcard" onclick="advanceTask(\''+t.id+'\')"><div class="ttl">'+t.title+'</div><div class="meta"><span>'+priTag(t.pri)+' '+cname(t.client)+'</span><span class="av">'+t.who+'</span></div></div>').join("")+'</div>';}).join("")+'</div>';
+};
+V.social=function(){
+  const d=new Date();const y=d.getFullYear(),m=d.getMonth();
+  const first=new Date(y,m,1).getDay();const days=new Date(y,m+1,0).getDate();
+  const dows=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  let cells="";for(let i=0;i<first;i++)cells+='<div class="cell out"></div>';
+  for(let dn=1;dn<=days;dn++){const ps=socialPosts.filter(p=>p.day===dn);cells+='<div class="cell"><div class="dn">'+dn+'</div>'+ps.map(p=>{const cls=p.status==="PUBLISHED"?"green":p.status==="DRAFT"?"amber":"";return '<div class="post '+cls+'" title="'+cname(p.client)+' · '+p.platform+'">'+p.cap+'</div>';}).join("")+'</div>';}
+  return '<section class="grid stats" style="grid-template-columns:repeat(4,1fr)">'+statCards([
+    ["Scheduled",socialPosts.filter(p=>p.status==="SCHEDULED").length,"upcoming","▦"],
+    ["Published",socialPosts.filter(p=>p.status==="PUBLISHED").length,"this month","✦"],
+    ["Awaiting Approval",socialPosts.filter(p=>p.status==="APPROVED"||p.status==="DRAFT").length,"","◇"],
+    ["Platforms","4","IG · FB · LI · YT","◆"]])+'</section>'+
+  '<div class="card web"><div class="ctitle"><span>'+d.toLocaleString("en-IN",{month:"long",year:"numeric"})+' content calendar</span><span class="secsub">orange=scheduled · green=published · amber=draft</span></div><div class="pad"><div class="cal">'+dows.map(x=>'<div class="dow">'+x+'</div>').join("")+cells+'</div></div></div>'+
+  '<div class="card"><div class="ctitle">Content schedule</div><div class="tablescroll"><table><thead><tr><th>Day</th><th>Client</th><th>Platform</th><th>Caption</th><th>Status</th></tr></thead><tbody>'+
+    socialPosts.slice().sort((a,b)=>a.day-b.day).map(p=>'<tr><td class="b">'+p.day+'</td><td class="mut">'+cname(p.client)+'</td><td>'+p.platform+'</td><td>'+p.cap+'</td><td>'+statTag(p.status)+'</td></tr>').join("")+
+  '</tbody></table></div></div>';
+};
+V.reports=function(){
+  return '<section class="actions"><span style="font-size:13px;align-self:center" class="mut">Generate an AI report for:</span>'+clients.map(c=>'<button class="abtn" onclick="runReport(\''+c.id+'\')">'+c.name+'</button>').join("")+'</section>'+
+  '<div class="card"><div class="ctitle">Generated reports (W4)</div><div class="pad">'+
+    (reports.length?reports.map((r,i)=>{const cl=clients.find(c=>c.id===r.client);return '<div class="rowline"><div><div class="b">'+cl.name+' — monthly report</div><div class="mut" style="font-size:12px;margin-top:2px;max-width:560px">'+r.summary.slice(0,130)+'…</div></div><button class="abtn" onclick="showReport(reports['+i+'])">View</button></div>';}).join(""):'<p class="mut" style="font-size:13px">No reports yet — pick a client above. KPIs are gathered and an AI summary written automatically.</p>')+
+  '</div></div>'+
+  '<div class="card"><div class="ctitle">Client health &amp; ROAS</div><div class="tablescroll"><table><thead><tr><th>Client</th><th>Industry</th><th>Retainer</th><th>Result on record</th><th>Health</th><th>ROAS</th></tr></thead><tbody>'+
+    clients.map(c=>{const k=clientKpis(c.id);return '<tr><td class="b">'+c.name+'</td><td class="mut">'+c.industry+'</td><td>'+inr(c.retainer)+'</td><td class="mut">'+c.result+'</td><td class="'+(c.health>=80?'good':'warnc')+'">'+c.health+'</td><td class="'+(k.roas>=1.5?'good':'bad')+'">'+k.roas.toFixed(2)+'x</td></tr>';}).join("")+
+  '</tbody></table></div></div>';
+};
+V.finance=function(){
+  const revenue=invoices.filter(i=>i.status==="PAID").reduce((a,i)=>a+i.amount,0);
+  const outstanding=invoices.filter(i=>i.status!=="PAID").reduce((a,i)=>a+i.amount,0);
+  const exp=expenses.reduce((a,e)=>a+e.amount,0);const mrr=clients.reduce((a,c)=>a+c.retainer,0);const profit=mrr-exp;
+  const maxBar=Math.max(mrr,exp,1);
+  return '<section class="grid stats" style="grid-template-columns:repeat(4,1fr)">'+statCards([
+    ["MRR (retainers)",inr(mrr),"recurring","▥"],["Collected",inr(revenue),"paid invoices","✦"],
+    ["Outstanding",inr(outstanding),"sent + overdue","◆"],["Est. Monthly Profit",inr(profit),profit>=0?"healthy":"loss","▣"]])+'</section>'+
+  '<div class="cols"><div class="colstack">'+
+    '<div class="card"><div class="ctitle">Invoices</div><div class="tablescroll"><table><thead><tr><th>Invoice</th><th>Client</th><th>Amount</th><th>Due</th><th>Status</th></tr></thead><tbody>'+
+      invoices.map(i=>'<tr><td class="b">'+i.no+'</td><td class="mut">'+cname(i.client)+'</td><td>'+inr(i.amount)+'</td><td class="mut">'+new Date(i.due).toLocaleDateString("en-IN")+'</td><td>'+statTag(i.status)+'</td></tr>').join("")+
+    '</tbody></table></div></div>'+
+  '</div><div class="colstack">'+
+    '<div class="card web pad"><div class="sech" style="margin-bottom:12px">MRR vs monthly costs</div><div class="bars" style="height:150px"><div class="bar"><div class="rv good">'+inr(mrr)+'</div><div class="fill" style="height:'+(mrr/maxBar*100)+'%;background:var(--success)"></div><div class="cap">MRR</div></div><div class="bar"><div class="rv warnc">'+inr(exp)+'</div><div class="fill" style="height:'+(exp/maxBar*100)+'%;background:var(--warning)"></div><div class="cap">Costs</div></div></div></div>'+
+    '<div class="card pad"><div class="sech" style="margin-bottom:6px">Cost breakdown</div>'+expenses.map(e=>'<div class="rowline"><span>'+e.cat+'</span><span class="b">'+inr(e.amount)+'</span></div>').join("")+'</div>'+
+  '</div></div>';
+};
+V.team=function(){
+  const byCode={};team.forEach(o=>{(byCode[o.code]=byCode[o.code]||[]).push(o);});
+  const assign={};team.forEach(o=>assign[o.id]=[]);const idx={};
+  tasks.forEach(t=>{const ops=byCode[t.who];if(ops&&ops.length){idx[t.who]=idx[t.who]||0;assign[ops[idx[t.who]%ops.length].id].push(t);idx[t.who]++;}});
+  const present=team.filter(o=>o.status!=="LEAVE").length;
+  const hrs=team.reduce((a,o)=>a+o.hours,0);
+  const openTasks=tasks.filter(t=>t.status!=="APPROVED").length;
+  const cards=team.map(o=>{
+    const ts=assign[o.id];const ini=o.name.split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase();
+    return '<div class="card pad">'+
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span class="av" style="height:34px;width:34px;font-size:12px">'+ini+'</span><div style="flex:1"><div class="b">'+o.name+' <span style="font-weight:400;cursor:pointer;color:var(--brand2)" onclick="renameMember(\''+o.id+'\')" title="Set real name">&#9998;</span></div><div class="secsub">'+o.role+'</div></div>'+statTag(o.status)+'</div>'+
+      '<div class="rowline" style="border-top:0;padding:4px 0"><span class="mut">Login '+o.login+' · '+o.hours.toFixed(1)+'h today</span><span class="tag '+(ts.length?"orange":"")+'">'+ts.length+' task'+(ts.length!==1?"s":"")+'</span></div>'+
+      '<div>'+(ts.length?ts.map(t=>'<div class="rowline" style="padding:7px 0"><span style="flex:1">'+t.title+' '+priTag(t.pri)+'</span>'+statTag(t.status)+(t.status!=="APPROVED"?' <button class="abtn" style="padding:3px 8px;font-size:11px" onclick="advanceTask(\''+t.id+'\')">advance &rarr;</button>':'')+'</div>').join(""):'<div class="secsub" style="padding:7px 0">No tasks assigned today.</div>')+'</div>'+
+      '<div class="secsub" style="margin-top:6px;border-top:1px solid var(--border);padding-top:8px">&#128203; Daily report: '+o.report+'</div></div>';
+  }).join("");
+  return '<section class="grid stats" style="grid-template-columns:repeat(5,1fr)">'+statCards([
+    ["Operators",team.length,"one accountable studio","◉"],["Disciplines",DISCIPLINES,"under one roof","◇"],
+    ["Present Today",present,"of "+team.length,"✦"],["Hours Logged",hrs.toFixed(1),"today","▣"],
+    ["Open Tasks",openTasks,"in flight","▤"]])+'</section>'+
+  '<div class="secsub">Tasks auto-assigned by designation · click &#9998; to set each operator\'s real name · &ldquo;advance&rdquo; moves a task to its next stage.</div>'+
+  '<div class="grid" style="grid-template-columns:repeat(2,1fr)">'+cards+'</div>'+
+  '<div class="tiles">'+PRINCIPLES.map((p,i)=>'<div class="tile"><div class="ti">0'+(i+1)+'</div><h4>'+p[0]+'</h4><p>'+p[1]+'</p></div>').join("")+'</div>';
+};
+V.ai=function(){
+  const tools=[
+    ["◈","Monthly client report","KPIs + plain-language summary for a client.","runReport('mavenn')"],
+    ["▣","Cross-client performance","Blended ROAS, CPL trends and a verdict.","aiSummary()"],
+    ["◆","Lead scorer","Score & route a new website enquiry 0–100.","go('leads')"],
+    ["▤","Predict project delays","Flag tasks at risk of missing deadlines.","aiDelays()"],
+    ["✸","Meeting notes","Turn the weekly sync into notes & actions.","aiNotes()"],
+    ["🕸️","Anomaly scan","Overspend, low ROAS, cold leads, overdue invoices.","runAlerts()"],
+  ];
+  return '<div class="secsub">'+(AIREAL?"Running on Claude.":"Running on the transparent heuristic fallback — toggle Claude in the Studio tab.")+' Each tool is one click.</div>'+
+  '<div class="tiles">'+tools.map(t=>'<div class="tile clickable" onclick="'+t[3]+'"><div class="ti">'+t[0]+'</div><h4>'+t[1]+'</h4><p>'+t[2]+'</p></div>').join("")+'</div>';
+};
+function aiSummary(){const s=stats();const v=s.roas>=3?"strong":s.roas>=1.5?"healthy":"mixed";const txt="Across all retainers, "+inr(s.spend)+" of spend produced "+inr(s.revenue)+" revenue at a "+s.roas.toFixed(2)+"x blended ROAS ("+v+"). "+num(s.leads)+" leads captured; "+s.win+"% deal win-rate. Nambiyar's flagship Meta line is overspending — cap it and shift toward the top-ROAS search line."+(AIREAL?" (Claude)":" (heuristic)");document.getElementById("modal").innerHTML='<h3>Cross-client performance</h3><p class="mut" style="font-size:12px">All accounts · '+new Date().toLocaleDateString("en-IN")+'</p><div class="summary" style="margin-top:14px">'+txt+'</div><button class="abtn" style="margin-top:16px;float:right" onclick="closeModal()">Close</button>';document.getElementById("overlay").classList.add("open");log("ai_summary","Generated cross-client performance summary");}
+function aiDelays(){const risk=tasks.filter(t=>(t.pri==="URGENT"||t.pri==="HIGH")&&t.status!=="APPROVED");const txt=risk.length?risk.map(t=>"• "+t.title+" ("+cname(t.client)+") — "+t.pri+", still in "+t.status.replace("_"," ")).join("<br>"):"No high-risk tasks.";document.getElementById("modal").innerHTML='<h3>Predicted delays</h3><p class="mut" style="font-size:12px">'+risk.length+' task(s) at risk</p><div class="summary" style="margin-top:14px">'+txt+'</div><button class="abtn" style="margin-top:16px;float:right" onclick="closeModal()">Close</button>';document.getElementById("overlay").classList.add("open");log("ai_delays","Scanned tasks for delay risk");}
+function aiNotes(){const txt="<b>Friday review — notes</b><br>• Nambiyar: cap flagship Meta spend, push Google search +15%.<br>• Mavenn: ship site-visit landing page, monitor CRO.<br>• Homies: refresh approved-loan copy; QA GA4 server-side.<br>• iChain: finalise India ABM audiences on LinkedIn.<br><br><b>Actions</b><br>• Performance: rebalance Nambiyar budgets (today)<br>• Web: Mavenn LP live (tomorrow)<br>• Analytics: Homies tracking QA (Thu)"+(AIREAL?"<br><br>(Claude)":"<br><br>(heuristic)");document.getElementById("modal").innerHTML='<h3>Meeting notes</h3><p class="mut" style="font-size:12px">Auto-structured</p><div class="summary" style="margin-top:14px">'+txt+'</div><button class="abtn" style="margin-top:16px;float:right" onclick="closeModal()">Close</button>';document.getElementById("overlay").classList.add("open");log("ai_notes","Generated weekly meeting notes");}
+V.services=function(){
+  return '<div class="secsub">Full-stack performance &amp; brand work — verbatim from webfluence.in.</div>'+
+  '<div class="tiles">'+SERVICES.map(s=>'<div class="tile"><div class="ti">'+s[0]+'</div><h4>'+s[1]+'</h4><p>'+s[2]+'</p></div>').join("")+'</div>'+
+  '<div class="card web"><div class="ctitle"><span><span class="ic">⊛</span>Our proven growth framework</span></div><div class="pad"><div class="tiles">'+PROCESS.map((p,i)=>'<div class="tile"><div class="ti">'+(i+1)+'</div><h4>'+p[0]+'</h4><p>'+p[1]+'</p></div>').join("")+'</div></div></div>';
+};
+V.industries=function(){
+  return '<div class="secsub">Sector-specific expertise — eight industries served.</div>'+
+  '<div class="tiles">'+INDUSTRIES.map((s,i)=>'<div class="tile"><div class="ti">0'+(i+1)+'</div><h4>'+s[0]+'</h4><p>'+s[1]+'</p></div>').join("")+'</div>';
+};
+V.studio=function(){
+  return '<div class="cols"><div class="colstack">'+
+    '<div class="card web pad"><div class="sech" style="margin-bottom:6px">Built by operators. Run for operators.</div><p class="secsub" style="line-height:1.6">Webfluence began in 2012 with a single conviction: great brands deserve operators who treat their P&amp;L like their own. Paid media, organic, creative, web and analytics under one roof — one team, one P&amp;L, one accountable Slack channel.</p></div>'+
+    '<div class="card"><div class="ctitle"><span><span class="ic">✸</span>A short history</span></div><div class="pad"><div class="timeline">'+HISTORY.map(h=>'<div class="tl"><div class="yr">'+h[0]+'</div><div class="tt">'+h[1]+'</div><p>'+h[2]+'</p></div>').join("")+'</div></div></div>'+
+  '</div><div class="colstack">'+
+    '<div class="card pad"><div class="sech" style="margin-bottom:10px">Studio</div>'+
+      '<div class="rowline" style="border-top:0"><span class="mut">Company</span><span class="b" style="text-align:right">Webfluence Marketing Solutions Pvt. Ltd.</span></div>'+
+      '<div class="rowline"><span class="mut">Since</span><span class="b">2012 · '+STATS.years+' years</span></div>'+
+      '<div class="rowline"><span class="mut">Phone</span><span class="b">'+AGENCY.phone+'</span></div>'+
+      '<div class="rowline"><span class="mut">Email</span><span class="b">'+AGENCY.email+'</span></div>'+
+      '<div class="rowline"><span class="mut">Studio</span><span style="text-align:right;font-size:12px">HSR Layout,<br>Bengaluru 560102</span></div>'+
+    '</div>'+
+    '<div class="card pad"><div class="sech" style="margin-bottom:10px">Channels</div>'+
+      '<div class="rowline" style="border-top:0"><span class="mut">Instagram</span><span>'+AGENCY.ig+'</span></div>'+
+      '<div class="rowline"><span class="mut">LinkedIn</span><span style="font-size:12px">'+AGENCY.li+'</span></div>'+
+      '<div class="rowline"><span class="mut">YouTube</span><span>'+AGENCY.yt+'</span></div>'+
+    '</div>'+
+    '<div class="card pad"><div class="sech" style="margin-bottom:6px">AI engine</div><div class="secsub" style="margin-bottom:12px">Heuristic runs with no key; toggle to use real Claude.</div><div class="toggle" onclick="toggleAI()"><span class="sw '+(AIREAL?"on":"")+'"></span><span class="b">'+(AIREAL?"Claude (real API)":"Heuristic fallback")+'</span></div></div>'+
+  '</div></div>';
+};
+/* ===================== WEB BACKGROUND ===================== */
+(function webbg(){
+  const svg=document.getElementById("webbg");if(!svg)return;
+  const NS="http://www.w3.org/2000/svg";
+  function web(cx,cy,R,a0,a1,spokes,rings){
+    const g=document.createElementNS(NS,"g");g.setAttribute("stroke","rgba(245,181,12,.18)");g.setAttribute("fill","none");g.setAttribute("stroke-width","1");
+    const angs=[];for(let i=0;i<=spokes;i++){const a=a0+(a1-a0)*i/spokes;angs.push(a);
+      const l=document.createElementNS(NS,"line");l.setAttribute("x1",cx);l.setAttribute("y1",cy);l.setAttribute("x2",cx+Math.cos(a)*R);l.setAttribute("y2",cy+Math.sin(a)*R);g.appendChild(l);}
+    for(let r=1;r<=rings;r++){const rad=R*r/rings;let d="";angs.forEach((a,i)=>{const x=cx+Math.cos(a)*rad,y=cy+Math.sin(a)*rad;d+=(i?"L":"M")+x.toFixed(1)+" "+y.toFixed(1)+" ";});const p=document.createElementNS(NS,"path");p.setAttribute("d",d);g.appendChild(p);}
+    svg.appendChild(g);
+  }
+  web(1440,0,560,Math.PI*0.5,Math.PI,7,6);
+  web(0,900,520,-Math.PI*0.5,0,7,6);
+})();
+
+
+
+/* ===================== ROUTER ===================== */
+let TAB="dashboard";
+function go(tab){
+  TAB=tab;const def=NAV.find(n=>n[2]===tab)||NAV[0];
+  document.getElementById("ttl").textContent=def[3];
+  document.getElementById("sub").textContent=def[4];
+  let html="",grp="";
+  NAV.forEach(n=>{if(n[5]!==grp){grp=n[5];html+='<div class="grp">'+grp+'</div>';}html+='<button class="'+(n[2]===tab?"active":"")+'" onclick="go(\''+n[2]+'\')"><span class="ic">'+n[0]+'</span>'+n[1]+'</button>';});
+  document.getElementById("nav").innerHTML=html;
+  document.getElementById("view").innerHTML=(V[tab]||V.dashboard)();
+  window.scrollTo(0,0);
+}
+go("dashboard");
+</script>
+</body>
+</html>

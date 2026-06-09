@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Webfluence CRM</title>
+<link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<header>
+  <h1>Webfluence <span>CRM</span></h1>
+  <span class="pill"><span class="dot" id="aidot"></span><span id="aimode">AI: …</span></span>
+</header>
+<div class="wrap">
+
+  <!-- stat cards -->
+  <div class="grid stats" id="stats">
+    <div class="card stat"><div class="lab">Loading…</div><div class="val">—</div></div>
+  </div>
+
+  <!-- action buttons -->
+  <div class="actions">
+    <button class="btn primary" id="btn-sync">⟳ Sync campaigns (W3)</button>
+    <button class="btn" id="btn-report">Generate report (W4)</button>
+    <button class="btn" id="btn-alerts">Check anomalies (W5)</button>
+  </div>
+
+  <div class="cols">
+    <div class="colstack">
+
+      <!-- pipeline -->
+      <div class="card">
+        <div class="ctitle">Lead pipeline (AI-scored)</div>
+        <div class="tablescroll">
+          <table>
+            <thead><tr><th>Name</th><th>Email</th><th>Source</th><th>Stage</th><th>Score</th><th>Owner</th></tr></thead>
+            <tbody id="pipeline"><tr><td colspan="6" class="mut" style="padding:16px">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- campaigns -->
+      <div class="card">
+        <div class="ctitle">Campaign performance</div>
+        <div class="tablescroll">
+          <table>
+            <thead><tr><th>Campaign</th><th>Channel</th><th>Spend</th><th>Budget</th><th>Conv.</th><th>CPL</th><th>ROAS</th></tr></thead>
+            <tbody id="campaigns"><tr><td colspan="7" class="mut" style="padding:16px">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+    <div class="colstack">
+
+      <!-- lead capture form -->
+      <div class="card pad">
+        <div style="font-size:14px;font-weight:600;margin-bottom:10px">New enquiry (W1)</div>
+        <form id="lead-form">
+          <div class="grid2">
+            <input class="fld" name="client_id" value="1" placeholder="client_id" type="number" required/>
+            <input class="fld" name="name"      placeholder="Name"/>
+            <input class="fld" name="email"     placeholder="Email" type="email"/>
+            <input class="fld" name="phone"     placeholder="Phone"/>
+            <input class="fld" name="source"    placeholder="Source (referral, form…)"/>
+            <input class="fld" name="message"   placeholder="Message / intent"/>
+          </div>
+          <button class="submit" type="submit">Capture &amp; score lead (W1)</button>
+        </form>
+        <div id="score-out" class="scoreout" style="display:none"></div>
+      </div>
+
+      <!-- alerts -->
+      <div class="card pad">
+        <div style="font-size:14px;font-weight:600;margin-bottom:10px">Anomaly alerts (W5)</div>
+        <div id="alerts"><p class="mut" style="font-size:12px">Loading…</p></div>
+      </div>
+
+      <!-- activity feed -->
+      <div class="card pad">
+        <div style="font-size:14px;font-weight:600;margin-bottom:10px">Activity feed</div>
+        <div class="feed" id="feed"></div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+<script src="app.js"></script>
+</body>
+</html>
