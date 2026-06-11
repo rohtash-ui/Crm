@@ -12,9 +12,11 @@ interface Booking {
   startTime: string;
   endTime: string;
   status: string;
+  meetLink?: string;
+  calendarEventId?: string;
   cancelReason?: string;
   rescheduledFrom?: string;
-  eventType: { title: string; duration: number };
+  eventType: { title: string; duration: number; color?: string };
   payment?: { amount: number; currency: string; status: string; paypalTxnId?: string };
 }
 
@@ -154,7 +156,7 @@ export default function BookingsPage() {
             <table className="w-full text-sm min-w-[700px]">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  {["Guest", "Event", "Date & Time", "Payment", "Status", "Actions"].map((h) => (
+                  {["Guest", "Event", "Date & Time", "Meet", "Payment", "Status", "Actions"].map((h) => (
                     <th
                       key={h}
                       className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
@@ -188,6 +190,21 @@ export default function BookingsPage() {
                         <p className="text-xs text-blue-500 mt-0.5">
                           ↔ Rescheduled
                         </p>
+                      )}
+                    </td>
+                    <td className="px-5 py-4">
+                      {b.meetLink ? (
+                        <a
+                          href={b.meetLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-blue-600 border border-blue-200 px-2.5 py-1.5 rounded-lg hover:bg-blue-50"
+                          title={b.meetLink}
+                        >
+                          🎥 Join
+                        </a>
+                      ) : (
+                        <span className="text-xs text-gray-300">—</span>
                       )}
                     </td>
                     <td className="px-5 py-4">

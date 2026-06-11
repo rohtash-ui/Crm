@@ -143,6 +143,16 @@ export async function sendBookingConfirmation({
     currency,
   });
 
+  const meetButton = meetLink
+    ? `
+      <div style="text-align:center;margin:20px 0;">
+        <a href="${meetLink}" style="display:inline-block;background:#1a73e8;color:white;font-size:14px;font-weight:600;padding:12px 28px;border-radius:8px;text-decoration:none;">
+          🎥 Join Google Meet
+        </a>
+        <p style="color:#9CA3AF;font-size:12px;margin-top:8px;">Or copy: ${meetLink}</p>
+      </div>`
+    : "";
+
   await sendMail({
     to: guestEmail,
     subject: `Confirmed: ${eventTitle} with ${hostName}`,
@@ -153,7 +163,8 @@ export async function sendBookingConfirmation({
       <h2 style="color:#111827;margin:16px 0 4px;font-size:20px;">You're all set, ${guestName}!</h2>
       <p style="color:#6B7280;margin:0 0 8px;font-size:15px;">Your booking has been confirmed. Here are the details:</p>
       ${card}
-      ${meetLink ? `<p style="color:#6B7280;font-size:13px;margin-top:8px;">💡 A calendar invite has been sent with a Google Meet link.</p>` : ""}
+      ${meetButton}
+      ${meetLink ? `<p style="color:#6B7280;font-size:12px;margin-top:4px;">A Google Calendar invite has been sent to your inbox.</p>` : ""}
     `),
   });
 }

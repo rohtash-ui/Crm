@@ -5,7 +5,8 @@ import { sendBookingConfirmation, sendHostNotification } from "@/lib/email";
 import { isGoogleCalendarConfigured } from "@/lib/env";
 
 export async function POST(request: Request) {
-  const { orderId, bookingId } = await request.json();
+  const body = await request.json();
+  const { orderId, bookingId } = body;
 
   if (!orderId || !bookingId) {
     return Response.json({ error: "Missing orderId or bookingId" }, { status: 400 });
@@ -16,12 +17,7 @@ export async function POST(request: Request) {
     include: {
       eventType: true,
       payment: true,
-      host: {
-        include: {
-          calendarConnections: true,
-          accounts: { where: { provider: "google" } },
-        },
-      },
+      host: true,
     },
   });
 
@@ -35,26 +31,24 @@ export async function POST(request: Request) {
 
   // Idempotent: already confirmed
   if (booking.status === "CONFIRMED" && booking.payment.status === "COMPLETED") {
-    return Response.json({ success: true });
+    return Response.json({ success: true, meetLink: booking.meetLink });
   }
 
-  // Verify the order is in APPROVED state before capturing
+  // Verify PayPal order is APPROVED before capturing
   const orderStatus = await getPayPalOrder(orderId);
   if (!["APPROVED", "COMPLETED"].includes(orderStatus.status)) {
     return Response.json(
-      { error: `Order is not approved. Current status: ${orderStatus.status}` },
+      { error: `Payment not approved. Current status: ${orderStatus.status}` },
       { status: 402 }
     );
   }
 
+  // Capture the payment
   let capture;
   try {
     capture = await capturePayPalOrder(orderId);
-  } catch (err: any) {
-    await prisma.payment.update({
-      where: { bookingId },
-      data: { status: "FAILED" },
-    });
+  } catch {
+    await prisma.payment.update({ where: { bookingId }, data: { status: "FAILED" } });
     return Response.json({ error: "Payment capture failed" }, { status: 402 });
   }
 
@@ -64,24 +58,25 @@ export async function POST(request: Request) {
       data: { status: capture.status === "VOIDED" ? "FAILED" : "DENIED" },
     });
     return Response.json(
-      { error: `Payment was not completed. Status: ${capture.status}` },
+      { error: `Payment not completed. Status: ${capture.status}` },
       { status: 402 }
     );
   }
 
   const captureUnit = capture.purchase_units?.[0]?.payments?.captures?.[0];
-  const captureId = captureUnit?.id;
-  const payerEmail = capture.payer?.email_address;
+  const captureId   = captureUnit?.id;
+  const payerEmail  = capture.payer?.email_address;
 
+  // Confirm payment + booking atomically
   await prisma.$transaction([
     prisma.payment.update({
       where: { bookingId },
       data: {
         status: "COMPLETED",
-        paypalCaptureId: captureId,
-        paypalTxnId: captureId,
-        paypalPayerEmail: payerEmail || null,
-        webhookVerified: false,
+        paypalCaptureId:  captureId   ?? null,
+        paypalTxnId:      captureId   ?? null,
+        paypalPayerEmail: payerEmail  ?? null,
+        webhookVerified:  false,
       },
     }),
     prisma.booking.update({
@@ -90,70 +85,65 @@ export async function POST(request: Request) {
     }),
   ]);
 
-  // Create Google Calendar event
-  let meetLink: string | undefined;
-  const calConn = booking.host.calendarConnections[0];
-  const googleAccount = booking.host.accounts[0];
+  // ── Google Calendar event ──────────────────────────────────────────────────
+  let meetLink: string | null = null;
 
-  if (
-    isGoogleCalendarConfigured() &&
-    calConn &&
-    googleAccount?.access_token
-  ) {
+  if (isGoogleCalendarConfigured()) {
     try {
-      const calEvent = await createCalendarEvent(
-        googleAccount.access_token,
-        googleAccount.refresh_token || calConn.refreshToken || "",
-        {
-          summary: `${booking.eventType.title} with ${booking.guestName}`,
-          description: booking.notes || undefined,
-          startTime: booking.startTime,
-          endTime: booking.endTime,
-          attendeeEmail: booking.guestEmail,
-          attendeeName: booking.guestName,
-          timezone: booking.host.timezone || "UTC",
-        }
-      );
+      const calEvent = await createCalendarEvent(booking.hostId, {
+        summary:     `${booking.eventType.title} with ${booking.guestName}`,
+        description: booking.notes ?? undefined,
+        startTime:   booking.startTime,
+        endTime:     booking.endTime,
+        hostEmail:   booking.host.email!,
+        hostName:    booking.host.name  ?? "Host",
+        guestEmail:  booking.guestEmail,
+        guestName:   booking.guestName,
+        timezone:    booking.host.timezone ?? "UTC",
+      });
 
-      meetLink = calEvent.hangoutLink || undefined;
+      meetLink = calEvent.hangoutLink;
 
       await prisma.booking.update({
         where: { id: bookingId },
-        data: { calendarEventId: calEvent.id || null },
+        data: {
+          calendarEventId: calEvent.id,
+          meetLink:        meetLink,
+        },
       });
     } catch (err) {
-      console.error("[Calendar] Failed to create event:", err);
+      // Non-fatal — booking is already confirmed; log and continue
+      console.error("[Calendar] Event creation failed:", err);
     }
   }
 
-  // Send emails
-  const payment = booking.payment;
+  // ── Confirmation emails ────────────────────────────────────────────────────
   await Promise.allSettled([
     sendBookingConfirmation({
-      guestEmail: booking.guestEmail,
-      guestName: booking.guestName,
-      hostName: booking.host.name || "Host",
-      eventTitle: booking.eventType.title,
-      startTime: booking.startTime,
-      endTime: booking.endTime,
-      location: booking.eventType.location || undefined,
-      meetLink,
-      notes: booking.notes || undefined,
-      amount: payment.amount,
-      currency: payment.currency,
+      guestEmail:  booking.guestEmail,
+      guestName:   booking.guestName,
+      hostName:    booking.host.name  ?? "Host",
+      eventTitle:  booking.eventType.title,
+      startTime:   booking.startTime,
+      endTime:     booking.endTime,
+      location:    booking.eventType.location ?? undefined,
+      meetLink:    meetLink ?? undefined,
+      notes:       booking.notes ?? undefined,
+      amount:      booking.payment.amount,
+      currency:    booking.payment.currency,
     }),
     sendHostNotification({
-      hostEmail: booking.host.email!,
-      hostName: booking.host.name || "Host",
-      guestName: booking.guestName,
+      hostEmail:  booking.host.email!,
+      hostName:   booking.host.name  ?? "Host",
+      guestName:  booking.guestName,
       guestEmail: booking.guestEmail,
-      guestPhone: booking.guestPhone || undefined,
+      guestPhone: booking.guestPhone ?? undefined,
       eventTitle: booking.eventType.title,
-      startTime: booking.startTime,
-      endTime: booking.endTime,
-      notes: booking.notes || undefined,
-      amount: payment.amount,
-      currency: payment.currency,
+      startTime:  booking.startTime,
+      endTime:    booking.endTime,
+      notes:      booking.notes ?? undefined,
+      amount:     booking.payment.amount,
+      currency:   booking.payment.currency,
     }),
   ]);
 
