@@ -1,13 +1,13 @@
-import { addMinutes, format, isBefore, isAfter, parseISO } from "date-fns";
+import { addMinutes, isBefore, isAfter } from "date-fns";
 
 interface BusyPeriod {
-  start: string;
-  end: string;
+  start: string | Date;
+  end: string | Date;
 }
 
 interface AvailabilityWindow {
-  startTime: string;
-  endTime: string;
+  startTime: string; // "09:00"
+  endTime: string;   // "17:00"
 }
 
 export function generateTimeSlots(
@@ -27,14 +27,19 @@ export function generateTimeSlots(
   const windowEnd = new Date(date);
   windowEnd.setHours(endHour, endMin, 0, 0);
 
+  // Buffer: slots must start at least 2 hours from now
+  const minStart = new Date(Date.now() + 2 * 60 * 60 * 1000);
+
   let current = new Date(windowStart);
-  const now = new Date();
 
   while (isBefore(current, windowEnd)) {
     const slotEnd = addMinutes(current, duration);
+
+    // Slot must fully fit within the window
     if (isAfter(slotEnd, windowEnd)) break;
 
-    if (isBefore(current, now)) {
+    // Don't allow booking in the past or within 2h buffer
+    if (isBefore(current, minStart)) {
       current = addMinutes(current, 30);
       continue;
     }

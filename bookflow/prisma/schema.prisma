@@ -13,6 +13,7 @@ model User {
   emailVerified DateTime?
   image         String?
   username      String?   @unique
+  timezone      String    @default("UTC")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -98,11 +99,15 @@ model Booking {
   guestName       String
   guestEmail      String
   guestPhone      String?
+  guestTimezone   String        @default("UTC")
   notes           String?
   startTime       DateTime
   endTime         DateTime
   status          BookingStatus @default(PENDING)
   calendarEventId String?
+  cancelledAt     DateTime?
+  cancelReason    String?
+  rescheduledFrom String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
@@ -116,18 +121,22 @@ enum BookingStatus {
   CONFIRMED
   CANCELLED
   COMPLETED
+  RESCHEDULED
 }
 
 model Payment {
-  id            String        @id @default(cuid())
-  bookingId     String        @unique
-  amount        Float
-  currency      String        @default("USD")
-  status        PaymentStatus @default(PENDING)
-  paypalOrderId String?       @unique
-  paypalTxnId   String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id              String        @id @default(cuid())
+  bookingId       String        @unique
+  amount          Float
+  currency        String        @default("USD")
+  status          PaymentStatus @default(PENDING)
+  paypalOrderId   String?       @unique
+  paypalCaptureId String?
+  paypalTxnId     String?
+  paypalPayerEmail String?
+  webhookVerified Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 }
@@ -137,6 +146,7 @@ enum PaymentStatus {
   COMPLETED
   FAILED
   REFUNDED
+  DENIED
 }
 
 model CalendarConnection {

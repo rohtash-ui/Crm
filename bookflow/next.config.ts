@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "avatars.githubusercontent.com" },
     ],
   },
+  env: {
+    NEXT_PUBLIC_PAYPAL_MODE: process.env.PAYPAL_MODE || "sandbox",
+  },
 };
 
 export default nextConfig;
